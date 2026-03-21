@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OBS Radio Receiver</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        body { background: transparent; color: #00D7B6; font-family: monospace; padding: 20px; font-weight: bold; font-size: 18px; }
+        .error { color: #ff4444; }
+    </style>
+</head>
+<body>
+    <div id="status">📻 Starting Radio Tower...</div>
+    <div id="audio-container"></div>
+
+    <script>
+        // We give OBS a fixed, permanent "Phone Number" so the dashboard knows who to call
+        const peer = new Peer('f1-lads-obs-receiver-v1');
+
+        peer.on('open', (id) => {
+            document.getElementById('status').innerText = "✅ LIVE & LISTENING (ID: " + id + ")";
+        });
+
+        // When an engineer presses the Radio button on their phone:
+        peer.on('call', (call) => {
+            console.log("Incoming transmission...");
+            
+            // Auto-answer the call (without sending OBS audio back to the engineer)
+            call.answer(); 
+
+            // When the audio stream arrives, play it!
+            call.on('stream', (remoteStream) => {
+                const audio = document.createElement('audio');
+                audio.srcObject = remoteStream;
+                audio.autoplay = true;
+                document.getElementById('audio-container').appendChild(audio);
+
+                // When the 12 second timer ends and the dashboard hangs up, delete the audio player
+                call.on('close', () => {
+                    audio.remove();
+                });
+            });
+        });
+        
+        peer.on('error', (err) => {
+            document.getElementById('status').innerText = "❌ ERROR: " + err.type;
+            document.getElementById('status').className = "error";
+        });
+    </script>
+</body>
+</html>
