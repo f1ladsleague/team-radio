@@ -1,35 +1,88 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>F1 Lads | Engineer Dashboard</title>
+    <title>F1 Lads | Pit Wall Dashboard</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Titillium Web', sans-serif; background: #15151e; color: white; text-align: center; padding: 20px; }
-        .card { background: #1f1f27; border-radius: 12px; padding: 30px; max-width: 400px; margin: 0 auto; border-top: 5px solid #e10600; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        select, input, button { width: 100%; padding: 15px; margin: 10px 0; border-radius: 8px; border: none; font-size: 16px; box-sizing: border-box; }
-        button { background: #e10600; color: white; font-weight: 900; text-transform: uppercase; cursor: pointer; transition: 0.3s; }
-        .status { margin-top: 20px; color: #888; font-style: italic; font-size: 14px; }
+        :root { --f1-dark: #15151e; --f1-card: #1f1f27; --mercedes: #00D7B6; --redbull: #4781D7; --ferrari: #ED1131; --mclaren: #F47600; --aston: #229971; }
+        body { font-family: 'Titillium Web', sans-serif; background: var(--f1-dark); color: white; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .dashboard { width: 100%; max-width: 800px; background: var(--f1-card); padding: 30px; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); border-top: 5px solid #444; transition: border-color 0.3s; }
+        h1 { text-align: center; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; margin-top: 0; color: #fff; }
+        
+        /* Team Grid */
+        .team-grid { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; margin-bottom: 30px; }
+        .team-btn { background: #111; border: 2px solid #333; border-radius: 12px; padding: 15px; cursor: pointer; transition: 0.3s; width: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; filter: grayscale(100%) opacity(0.5); }
+        .team-btn:hover { filter: grayscale(50%) opacity(0.8); background: #222; }
+        .team-btn.selected { filter: grayscale(0%) opacity(1); border-color: var(--theme-color); box-shadow: 0 0 15px var(--theme-color); background: #2a2a35; }
+        .team-logo { width: 80px; height: 50px; object-fit: contain; }
+
+        /* Auth Section */
+        #auth-section { display: none; text-align: center; margin-bottom: 30px; padding: 20px; background: rgba(0,0,0,0.3); border-radius: 12px; }
+        input[type="password"] { padding: 12px; width: 200px; border-radius: 6px; border: 1px solid #444; background: #111; color: white; font-family: monospace; font-size: 18px; text-align: center; outline: none; }
+        .login-btn { padding: 12px 20px; background: #444; color: white; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; transition: 0.2s; margin-left: 10px; }
+        .login-btn:hover { background: #666; }
+
+        /* Driver Grid */
+        #driver-section { display: none; text-align: center; }
+        .driver-grid { display: flex; justify-content: center; gap: 30px; margin-top: 20px; }
+        .driver-card { background: #111; border: 2px solid #333; border-radius: 12px; overflow: hidden; width: 200px; cursor: pointer; transition: 0.3s; position: relative; }
+        .driver-card:hover { transform: translateY(-5px); border-color: var(--theme-color); box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+        .driver-photo { width: 100%; height: 200px; object-fit: cover; object-position: top; background: #222; border-bottom: 4px solid var(--theme-color); }
+        .driver-name { padding: 15px; font-size: 20px; font-weight: 900; text-transform: uppercase; margin: 0; }
+        .transmit-indicator { position: absolute; top: 10px; right: 10px; width: 15px; height: 15px; background: red; border-radius: 50%; display: none; box-shadow: 0 0 10px red; }
+
+        /* Active State */
+        .driver-card.active { border-color: red; box-shadow: 0 0 20px red; background: #2a0000; }
+        .driver-card.active .transmit-indicator { display: block; animation: blink 1s infinite; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+        
+        .status-bar { text-align: center; margin-top: 30px; font-weight: 700; color: #888; font-size: 18px; text-transform: uppercase; }
+        .live-text { color: red; font-weight: 900; animation: blink 1s infinite; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h2>Engineer Control</h2>
-        <select id="team-select">
-            <option value="">-- Select Team --</option>
-            <option value="Red Bull">Red Bull</option>
-            <option value="Ferrari">Ferrari</option>
-            <option value="Mercedes">Mercedes</option>
-            <option value="McLaren">McLaren</option>
-            <option value="Aston Martin">Aston Martin</option>
-        </select>
-        <input type="password" id="pass-input" placeholder="Team Password">
-        <button id="radio-btn" onclick="toggleRadio()">Initiate Team Radio</button>
-        <div class="status" id="status-text">System Ready</div>
+
+    <div class="dashboard" id="main-dash">
+        <h1>Pit Wall Radio</h1>
+        
+        <div class="team-grid">
+            <div class="team-btn" onclick="selectTeam('Mercedes', '#00D7B6', 'W15', ['Rodda', 'Kalpa'], 'Mercedes')">
+                <img src="https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/MER.png" class="team-logo">
+            </div>
+            <div class="team-btn" onclick="selectTeam('Red Bull', '#4781D7', 'RB2024', ['NippaE', 'Eranga'], 'RedBull')">
+                <img src="https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/RB.png" class="team-logo">
+            </div>
+            <div class="team-btn" onclick="selectTeam('Ferrari', '#ED1131', 'SF24', ['Mapa', 'Shiyan'], 'Ferrari')">
+                <img src="https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/FER.png" class="team-logo">
+            </div>
+            <div class="team-btn" onclick="selectTeam('McLaren', '#F47600', 'MCL38', ['Sahan', 'Sameera'], 'Mclaren')">
+                <img src="https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/MCL.png" class="team-logo">
+            </div>
+            <div class="team-btn" onclick="selectTeam('Aston Martin', '#229971', 'AMR24', ['Shahan', 'NuwieG'], 'AstonMartin')">
+                <img src="https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/AM.png" class="team-logo">
+            </div>
+        </div>
+
+        <div id="auth-section">
+            <h3 id="auth-title" style="margin-top:0;">Enter Engineer Password</h3>
+            <input type="password" id="team-pass" placeholder="Password">
+            <button class="login-btn" onclick="authenticate()">UNLOCK COMMS</button>
+        </div>
+
+        <div id="driver-section">
+            <h2 style="margin-bottom: 5px;">SELECT DRIVER TO TRANSMIT</h2>
+            <div class="driver-grid" id="driver-container">
+                </div>
+        </div>
+
+        <div class="status-bar" id="status-text">SYSTEM STANDBY</div>
     </div>
 
     <script>
+        // --- FIREBASE CONFIG (UPDATE URL) ---
         const firebaseConfig = {
             apiKey: "AIzaSyCCiZwdBkZBZubr8oVsG8hkNE-x2iq3HJ0",
             authDomain: "f1-lads-team-radio-589fc.firebaseapp.com",
@@ -42,41 +95,87 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        const teamPasses = { "Red Bull": "RB2024", "Ferrari": "SF24", "Mercedes": "W15", "McLaren": "MCL38", "Aston Martin": "AMR24" };
-        let isActive = false;
+        let currentTeam = null; let currentHex = null; let currentPass = null; 
+        let currentDrivers = []; let currentFileSuffix = null;
+        let activeDriver = null; let safetyTimer = null;
 
-        function toggleRadio() {
-            const team = document.getElementById('team-select').value;
-            const pass = document.getElementById('pass-input').value;
-            const btn = document.getElementById('radio-btn');
-            const status = document.getElementById('status-text');
-
-            if (!team || teamPasses[team] !== pass) { alert("Invalid Team or Password"); return; }
-
-            isActive = !isActive;
+        function selectTeam(name, hex, pass, drivers, suffix) {
+            if(activeDriver) return; // Prevent switching while broadcasting
             
-            db.ref('radioState').update({
-                active: isActive,
-                team: team
+            currentTeam = name; currentHex = hex; currentPass = pass; 
+            currentDrivers = drivers; currentFileSuffix = suffix;
+
+            // UI Updates
+            document.querySelectorAll('.team-btn').forEach(btn => btn.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+            document.documentElement.style.setProperty('--theme-color', hex);
+            document.getElementById('main-dash').style.borderColor = hex;
+            
+            document.getElementById('auth-section').style.display = 'block';
+            document.getElementById('driver-section').style.display = 'none';
+            document.getElementById('team-pass').value = '';
+            document.getElementById('auth-title').innerText = `${name} Authentication`;
+        }
+
+        function authenticate() {
+            const input = document.getElementById('team-pass').value;
+            if (input === currentPass) {
+                document.getElementById('auth-section').style.display = 'none';
+                buildDriverGrid();
+                document.getElementById('driver-section').style.display = 'block';
+                document.getElementById('status-text').innerText = "COMMS UNLOCKED";
+            } else {
+                alert("ACCESS DENIED: Incorrect Password.");
+            }
+        }
+
+        function buildDriverGrid() {
+            const container = document.getElementById('driver-container');
+            container.innerHTML = '';
+            
+            currentDrivers.forEach(driver => {
+                const safeName = driver.replace(/\s+/g, '');
+                container.innerHTML += `
+                    <div class="driver-card" id="card-${safeName}" onclick="toggleRadio('${safeName}')">
+                        <div class="transmit-indicator"></div>
+                        <img src="https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/${safeName}.png" class="driver-photo">
+                        <h3 class="driver-name">${driver}</h3>
+                    </div>
+                `;
             });
+        }
 
-            btn.innerText = isActive ? "STOP TRANSMISSION" : "INITIATE TEAM RADIO";
-            btn.style.background = isActive ? "#fff" : "#e10600";
-            btn.style.color = isActive ? "#000" : "#fff";
-            status.innerText = isActive ? "TRANSMITTING LIVE..." : "System Ready";
+        function toggleRadio(driverName) {
+            if (activeDriver && activeDriver !== driverName) return; // Can't talk to both at once
+            
+            const card = document.getElementById(`card-${driverName}`);
+            const status = document.getElementById('status-text');
+            const videoFileName = `${driverName}_${currentFileSuffix}.webm`;
 
-            // Safety Auto-off after 12 seconds
-            if(isActive) {
-                setTimeout(() => { 
-                    if(isActive) {
-                        isActive = false;
-                        db.ref('radioState').update({ active: false });
-                        btn.innerText = "INITIATE TEAM RADIO";
-                        btn.style.background = "#e10600";
-                        btn.style.color = "#fff";
-                        status.innerText = "System Ready";
-                    }
-                }, 12000);
+            if (!activeDriver) {
+                // START TRANSMISSION
+                activeDriver = driverName;
+                card.classList.add('active');
+                status.innerHTML = `<span class="live-text">TRANSMITTING TO ${driverName}...</span> (Click again to stop)`;
+                
+                db.ref('radioState').set({
+                    active: true,
+                    team: currentTeam,
+                    driver: driverName,
+                    video: videoFileName,
+                    timestamp: Date.now()
+                });
+
+                // Auto-kill after 12s
+                safetyTimer = setTimeout(() => { if(activeDriver) toggleRadio(activeDriver); }, 12000);
+            } else {
+                // STOP TRANSMISSION
+                clearTimeout(safetyTimer);
+                activeDriver = null;
+                card.classList.remove('active');
+                status.innerText = "COMMS UNLOCKED";
+                
+                db.ref('radioState').update({ active: false });
             }
         }
     </script>
