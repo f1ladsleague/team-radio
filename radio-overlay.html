@@ -4,20 +4,29 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: transparent; font-family: 'Titillium Web', sans-serif; }
+        body { margin: 0; padding: 0; overflow: hidden; background: transparent; }
+        
+        /* Make the container full screen to match your 1920x1080 video */
         #radio-container {
             position: absolute;
-            bottom: 180px;
-            left: 100px;
-            display: none;
+            top: 0;
+            left: 0;
+            width: 1920px;
+            height: 1080px;
+            display: none; /* Hidden until triggered */
+            justify-content: center;
             align-items: center;
         }
-        #radio-video { width: 450px; }
-        #debug-log { position: fixed; top: 0; left: 0; background: rgba(0,0,0,0.8); color: lime; font-family: monospace; font-size: 12px; padding: 5px; z-index: 100; }
+
+        /* Ensure the video fills the canvas exactly as it did in After Effects */
+        #radio-video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
     </style>
 </head>
 <body>
-    <div id="debug-log">Status: Initializing...</div>
 
     <div id="radio-container">
         <video id="radio-video" src="F1-Radio-System/team_radio_anim.webm" muted></video>
@@ -37,31 +46,35 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-        const debug = document.getElementById('debug-log');
-
-        // Connection Check
-        db.ref('.info/connected').on('value', (snap) => {
-            debug.innerText = snap.val() ? "Status: Connected to Firebase" : "Status: DISCONNECTED";
-            debug.style.color = snap.val() ? "lime" : "red";
-        });
 
         const container = document.getElementById('radio-container');
         const video = document.getElementById('radio-video');
         const beep = document.getElementById('beep-sound');
 
+        // This variable prevents the sound from playing when you click STOP
+        let wasActive = false;
+
         db.ref('radioState').on('value', (snapshot) => {
             const data = snapshot.val();
-            if (data && data.active === true) {
-                debug.innerText = "Status: RADIO ACTIVE (" + data.team + ")";
+            const isActive = data && data.active === true;
+
+            if (isActive) {
                 container.style.display = 'flex';
-                beep.play().catch(err => console.error("Audio error:", err));
-                video.play().catch(err => console.error("Video error:", err));
+                video.play();
+                
+                // ONLY play the beep if it wasn't already active (The transition from OFF to ON)
+                if (!wasActive) {
+                    beep.currentTime = 0;
+                    beep.play().catch(err => console.error("Audio error:", err));
+                }
             } else {
-                debug.innerText = "Status: Idle";
                 container.style.display = 'none';
                 video.pause();
                 video.currentTime = 0;
             }
+
+            // Update the state for the next check
+            wasActive = isActive;
         });
     </script>
 </body>
