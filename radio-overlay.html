@@ -6,19 +6,17 @@
     <style>
         body { margin: 0; padding: 0; overflow: hidden; background: transparent; }
         
-        /* Make the container full screen to match your 1920x1080 video */
         #radio-container {
             position: absolute;
             top: 0;
             left: 0;
             width: 1920px;
             height: 1080px;
-            display: none; /* Hidden until triggered */
+            display: none;
             justify-content: center;
             align-items: center;
         }
 
-        /* Ensure the video fills the canvas exactly as it did in After Effects */
         #radio-video {
             width: 100%;
             height: 100%;
@@ -29,12 +27,13 @@
 <body>
 
     <div id="radio-container">
-        <video id="radio-video" src="F1-Radio-System/team_radio_anim.webm" muted></video>
+        <video id="radio-video" muted></video>
     </div>
 
     <audio id="beep-sound" src="F1-Radio-System/radio_beep.mp3"></audio>
 
     <script>
+        // --- FIREBASE CONFIG (UPDATE URL) ---
         const firebaseConfig = {
             apiKey: "AIzaSyCCiZwdBkZBZubr8oVsG8hkNE-x2iq3HJ0",
             authDomain: "f1-lads-team-radio-589fc.firebaseapp.com",
@@ -51,7 +50,6 @@
         const video = document.getElementById('radio-video');
         const beep = document.getElementById('beep-sound');
 
-        // This variable prevents the sound from playing when you click STOP
         let wasActive = false;
 
         db.ref('radioState').on('value', (snapshot) => {
@@ -59,21 +57,27 @@
             const isActive = data && data.active === true;
 
             if (isActive) {
-                container.style.display = 'flex';
-                video.play();
+                // 1. Update the video source based on the driver selected
+                // E.g. "F1-Radio-System/Mapa_Ferrari.webm"
+                video.src = `F1-Radio-System/${data.video}`;
                 
-                // ONLY play the beep if it wasn't already active (The transition from OFF to ON)
+                // 2. Show container and play video
+                container.style.display = 'flex';
+                video.load(); // Force reload of new source
+                video.play().catch(e => console.error("Video Error:", e));
+                
+                // 3. Play sound ONLY on initial trigger
                 if (!wasActive) {
                     beep.currentTime = 0;
-                    beep.play().catch(err => console.error("Audio error:", err));
+                    beep.play().catch(e => console.error("Audio Error:", e));
                 }
             } else {
+                // Stop transmission
                 container.style.display = 'none';
                 video.pause();
-                video.currentTime = 0;
+                video.src = ""; // Clear source to prevent ghost frames
             }
 
-            // Update the state for the next check
             wasActive = isActive;
         });
     </script>
