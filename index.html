@@ -4,9 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pit Wall | F1 Lads Radio</title>
+    
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Titillium+Web:wght@400;700;900&display=swap" rel="stylesheet">
+    
     <style>
         :root { --f1-dark: #0e0e14; --f1-card: #15151e; --f1-border: #2a2a35; --theme-color: #444; }
         body { font-family: 'Titillium Web', sans-serif; background: var(--f1-dark); color: white; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
@@ -14,16 +18,16 @@
         /* Main Dashboard Window */
         .dashboard { width: 100%; max-width: 900px; background: var(--f1-card); padding: 30px; border-radius: 12px; border: 1px solid var(--f1-border); border-top: 6px solid var(--theme-color); box-shadow: 0 10px 40px rgba(0,0,0,0.8); transition: all 0.4s ease; box-sizing: border-box; }
         
-        /* Shrunk state for PC post-login */
+        /* Shrunk state for post-login */
         .dashboard.logged-in { max-width: 600px; }
 
-        .dash-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--f1-border); padding-bottom: 15px; margin-bottom: 25px; }
+        .dash-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--f1-border); padding-bottom: 15px; margin-bottom: 25px; gap: 15px; }
         .dash-header h1 { margin: 0; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 24px; }
         
-        /* Active Team Logo (Hidden by default) */
-        #active-team-logo { display: none; height: 40px; object-fit: contain; }
+        /* Active Team Logo */
+        #active-team-logo { display: none; height: 45px; object-fit: contain; }
 
-        .telemetry-status { font-family: 'Chakra Petch', monospace; color: #888; font-size: 16px; background: #0a0a0f; padding: 8px 15px; border-radius: 4px; border: 1px solid #222; text-align: center; white-space: nowrap; }
+        .telemetry-status { font-family: 'Chakra Petch', monospace; color: #888; font-size: 16px; background: #0a0a0f; padding: 8px 15px; border-radius: 4px; border: 1px solid #222; text-align: center; white-space: nowrap; font-weight: 700; }
 
         /* Team Row */
         .team-grid { display: flex; flex-wrap: nowrap; gap: 15px; justify-content: space-between; margin-bottom: 25px; transition: 0.3s; }
@@ -47,12 +51,14 @@
         #radio-check-btn:hover { background: #777; }
         #radio-check-btn.active { background: #e10600; border-color: #ff4444; box-shadow: 0 0 15px rgba(225, 6, 0, 0.5); }
 
-        .driver-grid { display: flex; justify-content: center; gap: 40px; }
+        .driver-grid { display: flex; justify-content: center; gap: 30px; }
         
         /* Driver Cards */
         .driver-card { background: #0a0a0f; border: 2px solid #222; border-radius: 8px; overflow: hidden; width: 220px; cursor: pointer; transition: 0.3s; position: relative; }
         .driver-card.disabled { opacity: 0.4; filter: grayscale(100%); cursor: not-allowed; }
         .driver-card:hover:not(.disabled) { transform: translateY(-5px); border-color: #555; }
+        
+        /* Dynamic Hex Background */
         .driver-photo-wrap { width: 100%; height: 220px; background-color: var(--theme-color); position: relative; border-bottom: 2px solid #222; }
         .driver-photo { width: 100%; height: 100%; object-fit: cover; object-position: top center; mix-blend-mode: normal; }
         .driver-name { padding: 15px; font-size: 22px; font-weight: 900; text-transform: uppercase; margin: 0; text-align: center; background: #0a0a0f; }
@@ -67,14 +73,15 @@
 
         /* Mobile Adjustments */
         @media (max-width: 768px) {
-            .dash-header { flex-direction: column; gap: 15px; }
-            .telemetry-status { width: 100%; box-sizing: border-box; font-size: 14px; white-space: normal; }
+            .dash-header { flex-direction: column; text-align: center; }
+            .telemetry-status { font-size: 14px; padding: 6px 10px; }
             .team-grid { flex-direction: column; gap: 10px; }
             .team-btn { width: 100%; box-sizing: border-box; padding: 20px; }
             .auth-controls { flex-direction: column; width: 100%; }
             input[type="password"] { width: 100%; box-sizing: border-box; }
             .login-btn { width: 100%; margin-left: 0; }
             .driver-grid { flex-direction: column; align-items: center; gap: 20px; }
+            .driver-card { width: 100%; max-width: 280px; }
         }
     </style>
 </head>
@@ -121,7 +128,7 @@
     </div>
 
     <script>
-        // --- FIREBASE CONFIG (STAYS THE SAME) ---
+        // --- FIREBASE CONFIG ---
         const firebaseConfig = {
             apiKey: "AIzaSyCCiZwdBkZBZubr8oVsG8hkNE-x2iq3HJ0",
             authDomain: "f1-lads-team-radio-589fc.firebaseapp.com",
@@ -140,9 +147,9 @@
         let activeDriverFile = null; let safetyTimer = null;
 
         // --- TELEMETRY STATE ---
-        let raceState = "PRE-RACE"; // "PRE-RACE", "RACING", "FINISHED"
+        let raceState = "PRE-RACE"; // "PRE-RACE", "RACING"
         let currentLap = 0;
-        let lastTransmittedLap = -1; // Tracks usage to enforce 1 per lap
+        let lastTransmittedLap = -1;
 
         // 1. SELECT TEAM
         function selectTeam(name, hex, pass, drivers, suffix, logoFile) {
@@ -163,13 +170,14 @@
         function authenticate() {
             const input = document.getElementById('team-pass').value;
             if (input === currentPass) {
-                // UI Transition
+                // Hide Logos & Auth
                 document.getElementById('auth-section').style.display = 'none';
                 document.getElementById('team-grid').style.display = 'none';
                 
                 // Shrink Box & Swap Text for Logo
                 document.getElementById('main-dash').classList.add('logged-in');
                 document.getElementById('dash-title').style.display = 'none';
+                
                 const logoEl = document.getElementById('active-team-logo');
                 logoEl.src = `https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/${currentLogo}`;
                 logoEl.style.display = 'block';
@@ -177,12 +185,13 @@
                 buildDriverGrid();
                 document.getElementById('driver-section').style.display = 'block';
                 
-                evaluateTelemetryState(); // Check if we are pre-race or racing
+                evaluateTelemetryState();
             } else {
                 alert("ACCESS DENIED");
             }
         }
 
+        // Build Driver Cards with Hex Backgrounds
         function buildDriverGrid() {
             const container = document.getElementById('driver-container');
             container.innerHTML = '';
@@ -203,7 +212,6 @@
         function performRadioCheck() {
             if (raceState !== "PRE-RACE") return;
             
-            // Briefly trigger the first driver's comms for 3 seconds to verify OBS audio/video
             const testDriver = currentDrivers[0];
             updateTelemetry("[ RADIO CHECK ACTIVE ]", "#e10600");
             
@@ -216,7 +224,7 @@
 
             setTimeout(() => {
                 db.ref('radioState').update({ active: false });
-                evaluateTelemetryState(); // Reset text back to READY
+                evaluateTelemetryState(); 
             }, 3000);
         }
 
@@ -226,25 +234,24 @@
             
             const card = document.getElementById(`card-${fileId}`);
             
-            // --- ENFORCE LEAGUE RULES ---
             if (!activeDriverFile) {
                 if (raceState === "PRE-RACE") {
-                    updateTelemetry("USE RADIO CHECK PRE-RACE", "#F47600");
+                    updateTelemetry("[ USE RADIO CHECK ]", "#F47600");
                     return;
                 }
                 if (currentLap <= 2) {
-                    updateTelemetry(`LOCKED: ON LAP ${currentLap} OF 2`, "#ff4444");
+                    updateTelemetry(`[ LOCKED: LAP ${currentLap} OF 2 ]`, "#ff4444");
                     return;
                 }
                 if (currentLap === lastTransmittedLap) {
-                    updateTelemetry(`LOCKED: ALREADY USED ON LAP ${currentLap}`, "#ff4444");
+                    updateTelemetry(`[ LOCKED: LAP ${currentLap} USED ]`, "#ff4444");
                     return;
                 }
 
-                // PASSES RULES -> GO LIVE
+                // GO LIVE
                 activeDriverFile = fileId;
                 card.classList.add('active');
-                lastTransmittedLap = currentLap; // Log usage for this lap
+                lastTransmittedLap = currentLap;
                 updateTelemetry(`[ ON AIR : ${displayName.toUpperCase()} ]`, "#ff4444");
                 
                 db.ref('radioState').set({
@@ -266,7 +273,7 @@
             }
         }
 
-        // 5. TELEMETRY INTEGRATION (pits-n-giggles)
+        // 5. TELEMETRY INTEGRATION (Socket.io)
         function updateTelemetry(text, color = "#888") {
             const tel = document.getElementById('telemetry');
             tel.innerText = text;
@@ -280,11 +287,13 @@
 
             if (raceState === "PRE-RACE") {
                 updateTelemetry("[ READY: PRE-RACE ]", "#00D7B6");
-                checkBtn.style.display = "block";
-                checkBtn.classList.add("active");
-                cards.forEach(c => c.classList.add('disabled')); // Disable real comms
+                if(checkBtn) {
+                    checkBtn.style.display = "block";
+                    checkBtn.classList.add("active");
+                }
+                cards.forEach(c => c.classList.add('disabled')); 
             } else if (raceState === "RACING") {
-                checkBtn.style.display = "none";
+                if(checkBtn) checkBtn.style.display = "none";
                 cards.forEach(c => c.classList.remove('disabled'));
                 
                 if (currentLap <= 2) {
@@ -297,56 +306,53 @@
             }
         }
 
-        // --- CONNECT TO telemetry.f1lads.com ---
-        // Pits-n-giggles generally broadcasts via WebSocket. 
-        // Adjust the wss:// URL if your server uses a specific port (e.g., :8080)
-        
         function connectToTelemetry() {
             try {
-                const ws = new WebSocket('wss://telemetry.f1lads.com');
-                
-                ws.onopen = () => console.log("Connected to F1 Telemetry");
-                
-                ws.onmessage = (event) => {
-                    const data = JSON.parse(event.data);
-                    
-                    // NOTE: These variable names depend on your specific F1 game year format in pits-n-giggles.
-                    // Packet 1 = Session Data, Packet 2 = Lap Data
-                    
+                // Connect via Socket.io wrapper
+                const socket = io('https://telemetry.f1lads.com', {
+                    transports: ['websocket']
+                });
+
+                socket.on('connect', () => {
+                    console.log("Connected to F1 Telemetry via Socket.io!");
+                    evaluateTelemetryState();
+                });
+
+                // Scan all incoming events
+                socket.onAny((eventName, ...args) => {
+                    const data = args[0];
+                    if (!data) return;
+
+                    // Packet 1 (Session Data)
                     if (data.packetId === 1 && data.sessionType) {
-                        // Check if session is active (e.g., SessionType 10 = Race)
-                        // This determines if we are PRE-RACE or RACING
-                        // Replace logic below with exact pits-n-giggles session state flags
                         if (data.sessionTime > 0 && !data.isPaused) {
                             raceState = "RACING";
                         } else {
                             raceState = "PRE-RACE";
                         }
+                        evaluateTelemetryState();
                     }
 
+                    // Packet 2 (Lap Data)
                     if (data.packetId === 2 && data.lapData) {
-                        // Assuming data.lapData is an array of cars. You need to map this to the player's car.
-                        // Usually, the host car is index 0, or defined in Packet 0.
                         const newLap = data.lapData[0].currentLapNum; 
-                        
                         if (newLap !== currentLap) {
                             currentLap = newLap;
-                            if(!activeDriverFile) evaluateTelemetryState(); // Update UI if not currently talking
+                            if(!activeDriverFile) evaluateTelemetryState();
                         }
                     }
-                };
+                });
 
-                ws.onclose = () => {
+                socket.on('disconnect', () => {
                     updateTelemetry("[ TELEMETRY OFFLINE ]", "#ff4444");
-                    // Auto-reconnect after 5 seconds
-                    setTimeout(connectToTelemetry, 5000);
-                };
+                });
+
             } catch (error) {
-                console.error("Telemetry error. Ensure wss:// is running.", error);
+                console.error("Telemetry error.", error);
             }
         }
 
-        // Initialize connection
+        // Start Connection
         connectToTelemetry();
 
     </script>
