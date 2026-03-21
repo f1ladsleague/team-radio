@@ -9,6 +9,7 @@
     
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Titillium+Web:wght@400;700;900&display=swap" rel="stylesheet">
     
@@ -16,11 +17,9 @@
         :root { --f1-dark: #0e0e14; --f1-card: #15151e; --f1-border: #2a2a35; --theme-color: #444; }
         body { font-family: 'Titillium Web', sans-serif; background: var(--f1-dark); color: white; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
         
-        /* Branding */
         .brand-header { margin-bottom: 25px; margin-top: 10px; }
         .brand-logo { height: 75px; object-fit: contain; }
 
-        /* Main Dashboard Window */
         .dashboard { width: 100%; max-width: 900px; background: var(--f1-card); padding: 30px; border-radius: 12px; border: 1px solid var(--f1-border); border-top: 6px solid var(--theme-color); box-shadow: 0 10px 40px rgba(0,0,0,0.8); transition: all 0.4s ease; box-sizing: border-box; }
         .dashboard.logged-in { max-width: 600px; }
 
@@ -29,30 +28,25 @@
 
         .telemetry-status { font-family: 'Chakra Petch', monospace; color: #888; font-size: 16px; background: #0a0a0f; padding: 8px 15px; border-radius: 4px; border: 1px solid #222; text-align: center; white-space: nowrap; font-weight: 700; }
 
-        /* Team Row */
         .team-grid { display: flex; flex-wrap: nowrap; gap: 15px; justify-content: space-between; margin-bottom: 25px; transition: 0.3s; }
         .team-btn { flex: 1; background: #0a0a0f; border: 2px solid #222; border-radius: 8px; padding: 15px 10px; cursor: pointer; transition: 0.3s; display: flex; justify-content: center; align-items: center; filter: grayscale(100%) opacity(0.4); }
         .team-btn:hover { filter: grayscale(50%) opacity(0.8); background: #111; }
         .team-btn.selected { filter: grayscale(0%) opacity(1); border-color: var(--theme-color); box-shadow: inset 0 0 15px rgba(255,255,255,0.05); background: #1a1a24; }
         .team-logo { height: 35px; width: auto; max-width: 100%; object-fit: contain; }
 
-        /* Auth Section */
         #auth-section { display: none; text-align: center; margin-top: 20px; background: #0a0a0f; padding: 30px; border-radius: 8px; border: 1px dashed var(--f1-border); }
         .auth-controls { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 15px; }
         input[type="password"] { padding: 15px; width: 250px; border-radius: 6px; border: 1px solid var(--theme-color); background: #000; color: white; font-family: 'Chakra Petch', monospace; font-size: 18px; text-align: center; outline: none; }
         .login-btn { padding: 15px 30px; background: var(--theme-color); color: #fff; border: none; border-radius: 6px; font-weight: 900; font-size: 16px; cursor: pointer; transition: 0.2s; text-transform: uppercase; }
         .login-btn:hover { filter: brightness(1.2); }
 
-        /* Driver Grid */
         #driver-section { display: none; text-align: center; }
-        
         #radio-check-btn { display: none; background: #555; color: white; border: 2px solid #777; padding: 12px 25px; border-radius: 6px; font-weight: 900; font-size: 14px; text-transform: uppercase; cursor: pointer; margin: 0 auto 25px auto; transition: 0.3s; width: 100%; max-width: 300px; }
         #radio-check-btn:hover { background: #777; }
         #radio-check-btn.active { background: #e10600; border-color: #ff4444; box-shadow: 0 0 15px rgba(225, 6, 0, 0.5); }
 
         .driver-grid { display: flex; justify-content: center; gap: 30px; }
         
-        /* Driver Cards */
         .driver-card { background: #0a0a0f; border: 2px solid #222; border-radius: 8px; overflow: hidden; width: 220px; cursor: pointer; transition: 0.3s; position: relative; }
         .driver-card.disabled { opacity: 0.4; filter: grayscale(100%); cursor: not-allowed; pointer-events: none; }
         .driver-card:hover:not(.disabled) { transform: translateY(-5px); border-color: #555; }
@@ -61,7 +55,6 @@
         .driver-photo { width: 100%; height: 100%; object-fit: cover; object-position: top center; mix-blend-mode: normal; }
         .driver-name { padding: 15px; font-size: 22px; font-weight: 900; text-transform: uppercase; margin: 0; text-align: center; background: #0a0a0f; }
         
-        /* Active Transmission State */
         .driver-card.active { border-color: red; box-shadow: 0 0 25px rgba(255, 0, 0, 0.4); }
         .driver-card.active .driver-name { background: #3a0000; color: #ff4444; }
         .live-led { position: absolute; top: 15px; right: 15px; width: 15px; height: 15px; background: red; border-radius: 50%; box-shadow: 0 0 10px red; display: none; z-index: 10; }
@@ -69,11 +62,10 @@
 
         @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1); } }
 
-        /* Mobile Adjustments */
         @media (max-width: 768px) {
             .dash-header { flex-direction: column; text-align: center; }
             .telemetry-status { font-size: 14px; padding: 6px 10px; }
-            .team-grid { flex-direction: column; gap: 10px; } /* Stacks 1 team per row */
+            .team-grid { flex-direction: column; gap: 10px; } 
             .team-btn { width: 100%; box-sizing: border-box; padding: 20px; }
             .auth-controls { flex-direction: column; width: 100%; }
             input[type="password"] { width: 100%; box-sizing: border-box; }
@@ -123,8 +115,7 @@
 
         <div id="driver-section">
             <button id="radio-check-btn" onclick="performRadioCheck()">Perform Radio Check</button>
-            <div class="driver-grid" id="driver-container">
-                </div>
+            <div class="driver-grid" id="driver-container"></div>
         </div>
     </div>
 
@@ -142,11 +133,15 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
+        // --- WEBRTC AUDIO STATE ---
+        const peer = new Peer(); // The engineer's random ID
+        let localMicStream = null;
+        let activeCall = null;
+
         let currentTeam = null; let currentHex = null; let currentPass = null; 
         let currentDrivers = []; let currentFileSuffix = null; let currentLogo = null;
         let activeDriverFile = null; let safetyTimer = null;
 
-        // --- CORE STATE ---
         let raceState = "PRE-RACE"; 
         let currentLap = 0;
         let lastTransmittedLap = -1;
@@ -165,12 +160,21 @@
             document.getElementById('team-pass').focus();
         }
 
-        function authenticate() {
+        async function authenticate() {
             const input = document.getElementById('team-pass').value;
             if (input === currentPass) {
+                
+                // 1. Ask for Microphone Permissions Immediately upon unlock
+                try {
+                    localMicStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                    console.log("Mic access granted!");
+                } catch (err) {
+                    alert("⚠️ MIC ACCESS DENIED. The visual graphic will work, but your voice will not be broadcasted. Please allow microphone permissions in your browser.");
+                }
+
+                // 2. Build the UI
                 document.getElementById('auth-section').style.display = 'none';
                 document.getElementById('team-grid').style.display = 'none';
-                
                 document.getElementById('main-dash').classList.add('logged-in');
                 
                 const logoEl = document.getElementById('active-team-logo');
@@ -208,15 +212,22 @@
             const testDriver = currentDrivers[0];
             updateTelemetry("[ RADIO CHECK ACTIVE ]", "#e10600");
             
+            // Send visual to Firebase
             db.ref('radioState').set({
                 active: true,
                 team: currentTeam,
-                video: `${testDriver.f}_${currentFileSuffix}.webm`,
+                video: `${testDriver.f}_${currentFileSuffix}.webm`, // You can eventually remove the video suffix if you just use a generic overlay!
                 timestamp: Date.now()
             });
 
+            // Send Live Audio Call to OBS
+            if (localMicStream) {
+                activeCall = peer.call('f1-lads-obs-receiver-v1', localMicStream);
+            }
+
             setTimeout(() => {
                 db.ref('radioState').update({ active: false });
+                if (activeCall) { activeCall.close(); activeCall = null; }
                 evaluateTelemetryState(); 
             }, 3000);
         }
@@ -229,12 +240,13 @@
             if (!activeDriverFile) {
                 if (raceState === "PRE-RACE" || currentLap < 3 || currentLap === lastTransmittedLap) return;
 
-                // ON AIR
+                // --- GOING ON AIR ---
                 activeDriverFile = fileId;
                 card.classList.add('active');
                 lastTransmittedLap = currentLap; 
                 updateTelemetry(`[ ON AIR : ${displayName.toUpperCase()} ]`, "#ff4444");
                 
+                // 1. Trigger the TV Graphic via Firebase
                 db.ref('radioState').set({
                     active: true,
                     team: currentTeam,
@@ -242,20 +254,33 @@
                     timestamp: Date.now()
                 });
 
+                // 2. Open the WebRTC Live Audio connection to OBS
+                if (localMicStream) {
+                    activeCall = peer.call('f1-lads-obs-receiver-v1', localMicStream);
+                }
+
+                // Auto-Hangup after 12 seconds
                 safetyTimer = setTimeout(() => { if(activeDriverFile) toggleRadio(activeDriverFile, displayName); }, 12000);
             
             } else {
-                // OFF AIR
+                // --- GOING OFF AIR ---
                 clearTimeout(safetyTimer);
                 activeDriverFile = null;
                 card.classList.remove('active');
+                
+                // 1. Hide TV Graphic
                 db.ref('radioState').update({ active: false });
+                
+                // 2. Hang up the live audio call
+                if (activeCall) {
+                    activeCall.close();
+                    activeCall = null;
+                }
                 
                 evaluateTelemetryState();
             }
         }
 
-        // --- TELEMETRY UI MANAGER ---
         function updateTelemetry(text, color = "#888") {
             const tel = document.getElementById('telemetry');
             tel.innerText = text;
@@ -287,7 +312,6 @@
             }
         }
 
-        // --- FIREBASE TELEMETRY LISTENER ---
         db.ref('telemetryState').on('value', (snapshot) => {
             const data = snapshot.val();
             if (!data) return;
@@ -297,11 +321,8 @@
             }
             
             if (data.lap && data.lap !== currentLap) {
-                if (data.lap < currentLap) {
-                    lastTransmittedLap = -1;
-                }
+                if (data.lap < currentLap) lastTransmittedLap = -1;
                 currentLap = data.lap;
-                
                 if (!activeDriverFile) evaluateTelemetryState();
             }
         });
