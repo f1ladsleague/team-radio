@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background: transparent; font-family: 'Titillium Web', sans-serif; }
+        #radio-container {
+            position: absolute;
+            bottom: 180px;
+            left: 100px;
+            display: none;
+            align-items: center;
+            animation: slideIn 0.5s ease-out;
+        }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-50px); } to { opacity: 1; transform: translateX(0); } }
+        #radio-video { width: 450px; filter: drop-shadow(0 5px 15px rgba(0,0,0,0.5)); }
+    </style>
+</head>
+<body>
+    <div id="radio-container">
+        <video id="radio-video" src="team_radio_anim.webm" muted></video>
+    </div>
+
+    <audio id="beep-sound" src="radio_beep.mp3"></audio>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCCiZwdBkZBZubr8oVsG8hkNE-x2iq3HJ0",
+            authDomain: "f1-lads-team-radio-589fc.firebaseapp.com",
+            databaseURL: "https://f1-lads-team-radio-589fc-default-rtdb.asia-southeast1.firebasedatabase.app/",
+            projectId: "f1-lads-team-radio-589fc",
+            storageBucket: "f1-lads-team-radio-589fc.firebasestorage.app",
+            messagingSenderId: "449577983062",
+            appId: "1:449577983062:web:db65755d30d1c6a14ceff7"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        const container = document.getElementById('radio-container');
+        const video = document.getElementById('radio-video');
+        const beep = document.getElementById('beep-sound');
+
+        db.ref('radioState').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data && data.active) {
+                container.style.display = 'flex';
+                beep.play();
+                video.play();
+            } else {
+                container.style.display = 'none';
+                video.pause();
+                video.currentTime = 0;
+            }
+        });
+    </script>
+</body>
+</html>

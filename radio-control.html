@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1 Lads | Radio Dashboard</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <style>
+        body { font-family: 'Titillium Web', sans-serif; background: #15151e; color: white; text-align: center; padding: 20px; }
+        .card { background: #1f1f27; border-radius: 12px; padding: 30px; max-width: 400px; margin: 0 auto; border-top: 5px solid #e10600; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        select, input, button { width: 100%; padding: 15px; margin: 10px 0; border-radius: 8px; border: none; font-size: 16px; box-sizing: border-box; }
+        button { background: #e10600; color: white; font-weight: 900; text-transform: uppercase; cursor: pointer; transition: 0.3s; }
+        button:disabled { background: #444; cursor: not-allowed; }
+        #zabi-notice { background: rgba(225, 6, 0, 0.3); color: #ff8080; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: 700; display: none; border: 1px solid #e10600; }
+        .status { margin-top: 20px; color: #888; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Team Radio</h2>
+        <div id="zabi-notice">⚠️ RADIO LOCKED (Wait for Lap 3)</div>
+        <select id="team-select">
+            <option value="">-- Select Team --</option>
+            <option value="Red Bull">Red Bull</option>
+            <option value="Ferrari">Ferrari</option>
+            <option value="Mercedes">Mercedes</option>
+            <option value="McLaren">McLaren</option>
+            <option value="Aston Martin">Aston Martin</option>
+        </select>
+        <input type="password" id="pass-input" placeholder="Password">
+        <button id="radio-btn" onclick="toggleRadio()">Initiate Radio</button>
+        <div class="status" id="status-text">Ready</div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCCiZwdBkZBZubr8oVsG8hkNE-x2iq3HJ0",
+            authDomain: "f1-lads-team-radio-589fc.firebaseapp.com",
+            databaseURL: "https://f1-lads-team-radio-589fc-default-rtdb.asia-southeast1.firebasedatabase.app/",
+            projectId: "f1-lads-team-radio-589fc",
+            storageBucket: "f1-lads-team-radio-589fc.firebasestorage.app",
+            messagingSenderId: "449577983062",
+            appId: "1:449577983062:web:db65755d30d1c6a14ceff7"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        const teamPasses = { "Red Bull": "RB2024", "Ferrari": "SF24", "Mercedes": "W15", "McLaren": "MCL38", "Aston Martin": "AMR24" };
+        let isActive = false;
+        let isLocked = true;
+
+        db.ref('broadcastLocked').on('value', (snap) => {
+            isLocked = snap.val();
+            document.getElementById('zabi-notice').style.display = isLocked ? 'block' : 'none';
+            document.getElementById('radio-btn').disabled = isLocked;
+        });
+
+        function toggleRadio() {
+            const team = document.getElementById('team-select').value;
+            const pass = document.getElementById('pass-input').value;
+            if (teamPasses[team] !== pass) { alert("Wrong Password"); return; }
+
+            isActive = !isActive;
+            db.ref('radioState').set({ active: isActive, team: team });
+            
+            const btn = document.getElementById('radio-btn');
+            btn.innerText = isActive ? "END TRANSMISSION" : "INITIATE RADIO";
+            btn.style.background = isActive ? "#fff" : "#e10600";
+            btn.style.color = isActive ? "#000" : "#fff";
+
+            if(isActive) {
+                setTimeout(() => { if(isActive) toggleRadio(); }, 12000); // 12s Auto-off
+            }
+        }
+    </script>
+</body>
+</html>
