@@ -43,7 +43,6 @@
 
         #driver-section { display: none; text-align: center; }
 
-        /* --- PITWALL TELEMETRY BANNER --- */
         #live-banner {
             display: none;
             background: #0a0000;
@@ -71,7 +70,6 @@
 
         .blinking-dot { width: 14px; height: 14px; background-color: #ff0000; border-radius: 50%; box-shadow: 0 0 10px #ff0000; animation: flash 0.8s infinite alternate; }
         @keyframes flash { from { opacity: 1; box-shadow: 0 0 15px #ff0000; } to { opacity: 0.2; box-shadow: 0 0 2px #ff0000; } }
-        /* -------------------------------- */
 
         .driver-grid { display: flex; justify-content: center; gap: 30px; }
         .driver-wrap { display: flex; flex-direction: column; gap: 10px; align-items: center; width: 220px; }
@@ -90,7 +88,6 @@
         .live-led { position: absolute; top: 12px; right: 12px; width: 12px; height: 12px; background: #ff0000; border-radius: 50%; box-shadow: 0 0 10px #ff0000; display: none; z-index: 10; animation: flash 0.8s infinite alternate; }
         .driver-card.active .live-led { display: block; }
 
-        /* --- UPDATED BUTTON STYLE --- */
         .driver-check-btn { 
             display: none; background: #111; color: #aaa; border: 1px solid #444; 
             padding: 10px; border-radius: 4px; font-family: 'Share Tech Mono', monospace; 
@@ -102,20 +99,38 @@
             box-shadow: inset 0 0 10px rgba(255,0,0,0.2); 
         }
 
+        /* --- COMPACT MOBILE VIEW (NO SCROLL) --- */
         @media (max-width: 768px) {
-            .dash-header { flex-direction: column; gap: 15px; }
-            .telemetry-status { white-space: normal; word-wrap: break-word; width: 100%; box-sizing: border-box; font-size: 14px; }
-            .team-grid { flex-direction: column; gap: 12px; }
-            .team-btn { width: 100%; padding: 18px; box-sizing: border-box; }
-            .auth-controls { flex-direction: column; width: 100%; }
-            input[type="password"] { width: 100%; box-sizing: border-box; }
-            .login-btn { width: 100%; margin-left: 0; box-sizing: border-box; }
-            .driver-grid { flex-direction: column; align-items: center; gap: 20px; }
-            .driver-wrap { width: 100%; max-width: 280px; box-sizing: border-box; }
+            body { padding: 10px; }
+            .brand-header { margin-bottom: 10px; margin-top: 5px; }
+            .brand-logo { height: 45px; }
+            .dashboard { padding: 15px; }
+            .dash-header { flex-direction: column; gap: 10px; margin-bottom: 15px; padding-bottom: 10px; }
+            .telemetry-status { white-space: normal; word-wrap: break-word; width: 100%; box-sizing: border-box; font-size: 13px; padding: 6px 10px; }
             
-            #live-banner { flex-direction: column; gap: 10px; text-align: center; }
+            /* Wrap teams tightly */
+            .team-grid { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 15px; }
+            .team-btn { flex: 0 0 30%; padding: 8px; }
+            .team-logo { height: 20px; }
+            
+            #auth-section { padding: 15px; margin-top: 10px; }
+            .auth-controls { flex-direction: column; margin-top: 10px; gap: 8px; }
+            input[type="password"] { width: 100%; box-sizing: border-box; padding: 10px; font-size: 16px; }
+            .login-btn { width: 100%; box-sizing: border-box; padding: 10px; }
+
+            /* Compress Live Banner */
+            #live-banner { margin-bottom: 15px; padding: 8px 12px; flex-direction: column; gap: 8px; text-align: center; }
             .banner-left { justify-content: center; width: 100%; }
-            .banner-right { text-align: center; width: 100%; border-top: 1px solid #330000; padding-top: 10px; }
+            .banner-right { text-align: center; width: 100%; border-top: 1px solid #330000; padding-top: 8px; }
+            .data-value { font-size: 18px; }
+            #live-countdown { font-size: 24px; }
+
+            /* Side-by-side Driver View */
+            .driver-grid { flex-direction: row; gap: 10px; align-items: stretch; }
+            .driver-wrap { width: 48%; gap: 6px; }
+            .driver-photo-wrap { height: 110px; }
+            .driver-name { font-size: 14px; padding: 8px; }
+            .driver-check-btn { font-size: 11px; padding: 8px; }
         }
     </style>
 </head>
@@ -158,7 +173,6 @@
         </div>
 
         <div id="driver-section">
-            
             <div id="live-banner">
                 <div class="banner-left">
                     <div class="blinking-dot"></div>
@@ -198,7 +212,6 @@
         let currentTeam = null, currentHex = null, currentPass = null, currentDrivers = [], currentFileSuffix = null, currentLogo = null;
         let activeDriverFile = null, safetyTimer = null, raceState = "PRE-RACE", currentLap = 0, lastTransmittedLap = -1;
         
-        // Single interval tracker for our new high-speed loop
         let precisionTimerInterval = null;
 
         function selectTeam(name, hex, pass, drivers, suffix, logoFile) {
@@ -243,25 +256,23 @@
                             </div>
                             <h3 class="driver-name">${driver.d}</h3>
                         </div>
-                        <button class="driver-check-btn" id="check-${driver.f}" onclick="performDriverCheck('${driver.f}', '${driver.d}')">> SYS.CHECK: ${driver.d}</button>
+                        <button class="driver-check-btn" id="check-${driver.f}" onclick="performDriverCheck('${driver.f}', '${driver.d}')">RADIO CHECK: ${driver.d}</button>
                     </div>`;
             });
         }
 
-        // --- NEW HIGH-SPEED MILLISECOND TIMER ---
         function startPrecisionCountdown(durationMs, buttonEl) {
             const liveBanner = document.getElementById('live-banner');
             const countdownEl = document.getElementById('live-countdown');
             const endTime = Date.now() + durationMs;
             
-            liveBanner.style.display = 'flex'; // Use flex for new module layout
+            liveBanner.style.display = 'flex'; 
 
             clearInterval(precisionTimerInterval);
             precisionTimerInterval = setInterval(() => {
                 const now = Date.now();
                 const remaining = Math.max(0, endTime - now);
                 
-                // Format to exactly 3 decimal places (e.g., "11.984")
                 const formattedTime = (remaining / 1000).toFixed(3).padStart(6, '0');
                 
                 countdownEl.innerText = formattedTime;
@@ -270,7 +281,7 @@
                 if (remaining <= 0) {
                     clearInterval(precisionTimerInterval);
                 }
-            }, 30); // Runs ~33 times per second for smooth LCD update
+            }, 30); 
         }
 
         function performDriverCheck(fileId, displayName) {
@@ -278,12 +289,11 @@
             if (!localMicStream) { alert("⚠️ Microphone not connected!"); return; }
 
             const btn = document.getElementById(`check-${fileId}`);
-            const originalText = `> SYS.CHECK: ${displayName}`;
+            const originalText = `RADIO CHECK: ${displayName}`;
             
             btn.classList.add('active-check');
             document.querySelectorAll('.driver-check-btn').forEach(b => b.style.pointerEvents = "none");
 
-            // Start 5-second precise countdown
             startPrecisionCountdown(5000, btn);
 
             db.ref('radioState').set({
@@ -313,14 +323,13 @@
             const card = document.getElementById(`card-${fileId}`);
             
             if (!activeDriverFile) {
-                if (lineIsBusy) { updateTelemetry("[ ERR: LINE BUSY - WAITING ]", "#ff4444"); return; }
+                if (lineIsBusy) { return; } 
                 if (raceState === "PRE-RACE" || currentLap < 3 || currentLap === lastTransmittedLap) return;
 
                 activeDriverFile = fileId;
                 card.classList.add('active');
                 lastTransmittedLap = currentLap; 
                 
-                // Start 12-second precise countdown
                 startPrecisionCountdown(12000, null);
                 
                 db.ref('radioState').set({
@@ -355,19 +364,19 @@
             const checkBtns = document.querySelectorAll('.driver-check-btn');
             const cards = document.querySelectorAll('.driver-card');
             if (raceState === "PRE-RACE") {
-                updateTelemetry("[ SYS.READY : TX OPEN ]", "#00D7B6");
+                updateTelemetry("[ PRE-RACE : RADIO CHECKS OPEN ]", "#00D7B6");
                 checkBtns.forEach(btn => btn.style.display = "block");
                 cards.forEach(c => c.classList.add('disabled')); 
             } else {
                 checkBtns.forEach(btn => btn.style.display = "none");
                 if (currentLap < 3) {
-                    updateTelemetry(`[ LOCKED : DELTA L${currentLap} ]`, "#ff4444");
+                    updateTelemetry(`[ LOCKED UNTIL L3 (CURR: L${currentLap}) ]`, "#ff4444");
                     cards.forEach(c => c.classList.add('disabled'));
                 } else if (currentLap === lastTransmittedLap) {
-                    updateTelemetry(`[ L${currentLap} : BANDWIDTH EXHAUSTED ]`, "#F47600");
+                    updateTelemetry(`[ L${currentLap} : TRANSMISSION COMPLETED ]`, "#F47600");
                     cards.forEach(c => c.classList.add('disabled'));
                 } else {
-                    updateTelemetry(`[ L${currentLap} : READY TO TRANSMIT ]`, "#00D7B6");
+                    updateTelemetry(`[ L${currentLap} : COMMS READY ]`, "#00D7B6");
                     cards.forEach(c => c.classList.remove('disabled'));
                 }
             }
@@ -377,7 +386,7 @@
             const radio = snapshot.val();
             if (radio && radio.active && radio.team !== currentTeam) {
                 lineIsBusy = true;
-                updateTelemetry(`[ OVERRIDE : ${radio.team.toUpperCase()} TX LIVE ]`, "#ff4444");
+                updateTelemetry(`[ LINE BUSY : ${radio.team.toUpperCase()} ]`, "#ff4444");
                 document.querySelectorAll('.driver-card').forEach(c => c.classList.add('disabled'));
             } else if (radio && !radio.active) {
                 lineIsBusy = false;
