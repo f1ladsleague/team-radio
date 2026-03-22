@@ -192,27 +192,28 @@
     </div>
 
     <script>
-        const firebaseConfig = {
+            const firebaseConfig = {
             apiKey: "AIzaSyCCiZwdBkZBZubr8oVsG8hkNE-x2iq3HJ0",
             authDomain: "f1-lads-team-radio-589fc.firebaseapp.com",
             databaseURL: "https://f1-lads-team-radio-589fc-default-rtdb.asia-southeast1.firebasedatabase.app/",
             projectId: "f1-lads-team-radio-589fc",
-            storageBucket: "f1-lads-team-radio-589fc.firebasestorage.app",
-            messagingSenderId: "449577983062",
-            appId: "1:449577983062:web:db65755d30d1c6a14ceff7"
+            storageBucket: "f1-lads-team-radio-589fc.firebasestorage.app"
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
         const peer = new Peer(); 
         let localMicStream = null;
-        let activeCall = null;
+        let activeCalls = []; // Now an array to handle multiple receivers
         let lineIsBusy = false;
 
         let currentTeam = null, currentHex = null, currentPass = null, currentDrivers = [], currentFileSuffix = null, currentLogo = null;
         let activeDriverFile = null, safetyTimer = null, raceState = "PRE-RACE", currentLap = 0, lastTransmittedLap = -1;
         
         let precisionTimerInterval = null;
+
+        // The two separate devices we will broadcast to
+        const TARGET_TOWERS = ['f1lads-tower-obs', 'f1lads-tower-discord'];
 
         function selectTeam(name, hex, pass, drivers, suffix, logoFile) {
             if(activeDriverFile) return; 
@@ -229,7 +230,7 @@
                 try {
                     localMicStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 } catch (err) {
-                    alert("⚠️ Mic access denied. Audio will not be transmitted.");
+                    alert("[ ERR ] Mic access denied. Audio will not be transmitted.");
                 }
                 document.getElementById('auth-section').style.display = 'none';
                 document.getElementById('team-grid').style.display = 'none';
@@ -261,32 +262,74 @@
             });
         }
 
-        function startPrecisionCountdown(durationMs, buttonEl) {
+        function startPrecisionCountdown(totalDurationMs, buttonEl) {
             const liveBanner = document.getElementById('live-banner');
             const countdownEl = document.getElementById('live-countdown');
-            const endTime = Date.now() + durationMs;
+            
+            const now = Date.now();
+            const introDurationMs = 1500; 
+            const introEndTime = now + introDurationMs;
+            const totalEndTime = now + totalDurationMs;
             
             liveBanner.style.display = 'flex'; 
 
+            if(localMicStream) localMicStream.getAudioTracks()[0].enabled = false;
+
             clearInterval(precisionTimerInterval);
             precisionTimerInterval = setInterval(() => {
-                const now = Date.now();
-                const remaining = Math.max(0, endTime - now);
+                const currentTime = Date.now();
                 
-                const formattedTime = (remaining / 1000).toFixed(3).padStart(6, '0');
-                
-                countdownEl.innerText = formattedTime;
-                if(buttonEl) buttonEl.innerText = `> TX: ${formattedTime}s`;
+                if (currentTime < introEndTime) {
+                    const remainingIntro = ((introEndTime - currentTime) / 1000).toFixed(1);
+                    countdownEl.innerText = `CONNECTING: ${remainingIntro}s`;
+                    countdownEl.style.color = "#F47600"; 
+                    if(buttonEl) {
+                        buttonEl.innerText = `CONNECTING: ${remainingIntro}s`;
+                        buttonEl.style.color = "#F47600";
+                    }
+                } else {
+                    if(localMicStream && !localMicStream.getAudioTracks()[0].enabled) {
+                        localMicStream.getAudioTracks()[0].enabled = true; 
+                    }
+                    
+                    const remainingLive = Math.max(0, totalEndTime - currentTime);
+                    const formattedTime = (remainingLive / 1000).toFixed(3).padStart(6, '0');
+                    
+                    countdownEl.innerText = formattedTime;
+                    countdownEl.style.color = "#fff"; 
+                    if(buttonEl) {
+                        buttonEl.innerText = `> TX: ${formattedTime}s`;
+                        buttonEl.style.color = "#ff4444";
+                    }
 
-                if (remaining <= 0) {
-                    clearInterval(precisionTimerInterval);
+                    if (remainingLive <= 0) {
+                        clearInterval(precisionTimerInterval);
+                    }
                 }
             }, 30); 
         }
 
+        // Helper to dial all towers
+        function dialTowers() {
+            activeCalls = [];
+            if (!localMicStream) return;
+            TARGET_TOWERS.forEach(towerId => {
+                const call = peer.call(towerId, localMicStream);
+                if (call) activeCalls.push(call);
+            });
+        }
+
+        // Helper to hang up all towers
+        function hangupTowers() {
+            activeCalls.forEach(call => {
+                if (call) call.close();
+            });
+            activeCalls = [];
+        }
+
         function performDriverCheck(fileId, displayName) {
-            if (lineIsBusy) { alert("Wait a second, the line is busy with another team!"); return; }
-            if (!localMicStream) { alert("⚠️ Microphone not connected!"); return; }
+            if (lineIsBusy) { alert("[ ERR ] The line is busy with another team."); return; }
+            if (!localMicStream) { alert("[ ERR ] Microphone not connected."); return; }
 
             const btn = document.getElementById(`check-${fileId}`);
             const originalText = `RADIO CHECK: ${displayName}`;
@@ -304,15 +347,16 @@
                 timestamp: Date.now()
             });
 
-            activeCall = peer.call('f1lads-hq-tower-8844', localMicStream);
+            dialTowers();
 
             setTimeout(() => {
                 clearInterval(precisionTimerInterval);
                 db.ref('radioState').update({ active: false });
-                if (activeCall) { activeCall.close(); activeCall = null; }
+                hangupTowers();
                 
                 document.getElementById('live-banner').style.display = 'none';
                 btn.innerText = originalText;
+                btn.style.color = ""; 
                 btn.classList.remove('active-check');
                 document.querySelectorAll('.driver-check-btn').forEach(b => b.style.pointerEvents = "auto");
             }, 5000);
@@ -337,7 +381,7 @@
                     video: `${fileId}_${currentFileSuffix}.webm`, timestamp: Date.now()
                 });
 
-                if (localMicStream) { activeCall = peer.call('f1lads-hq-tower-8844', localMicStream); }
+                dialTowers();
                 
                 safetyTimer = setTimeout(() => { 
                     if(activeDriverFile) toggleRadio(activeDriverFile, displayName); 
@@ -350,7 +394,7 @@
                 activeDriverFile = null;
                 card.classList.remove('active');
                 db.ref('radioState').update({ active: false });
-                if (activeCall) { activeCall.close(); activeCall = null; }
+                hangupTowers();
                 evaluateTelemetryState();
             }
         }
