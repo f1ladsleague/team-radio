@@ -38,8 +38,8 @@
         });
 
         // --- 2. AUDIO STING SETUP ---
-        // Make sure this URL matches your exact Github repository path!
-        const GITHUB_BASE_URL = "https://raw.githubusercontent.com/f1ladsleague/F1-Radio-System/main/";
+        // Pulling raw audio directly from your specific folder
+        const GITHUB_BASE_URL = "https://raw.githubusercontent.com/f1ladsleague/team-radio/main/F1-Radio-System/";
         
         // Map the team names to your new MP3 files
         const stingFiles = {
@@ -87,10 +87,9 @@
                 const source = audioCtx.createMediaStreamSource(remoteStream);
                 
                 // --- THE MAGIC DELAY BUFFER ---
-                // Buffers the mic audio for 2.5 seconds while the intro sting plays.
-                // If your stings are longer/shorter, change the '2.5' below!
+                // Buffers the mic audio for exactly 1.5 seconds to match your track length
                 const delayNode = audioCtx.createDelay(5.0); 
-                delayNode.delayTime.value = 2.5; 
+                delayNode.delayTime.value = 1.5; 
                 
                 // Radio EQ
                 const bandpass = audioCtx.createBiquadFilter();
