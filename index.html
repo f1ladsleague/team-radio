@@ -61,32 +61,26 @@
         @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1); } }
 
         @media (max-width: 768px) {
-            /* Switch to a 2-column wrap layout instead of a single column */
+            /* Stack teams vertically, one per row */
             .team-grid { 
-                flex-direction: row; 
-                flex-wrap: wrap;
-                gap: 10px; 
+                flex-direction: column; 
+                gap: 12px; 
             }
             
-            /* Give each button 50% width minus half the gap, and fix the box model */
+            /* Full width, but box-sizing keeps the padding inside so it doesn't spill over */
             .team-btn { 
-                width: calc(50% - 5px); 
-                flex: none; /* Remove desktop flex property */
-                padding: 15px 10px; 
-                box-sizing: border-box; /* This stops the right-edge spill over */
+                width: 100%; 
+                padding: 18px; 
+                box-sizing: border-box; 
             }
 
-            /* Make the 5th team (odd one out) span the full width for a sleek finish */
-            .team-btn:last-child:nth-child(odd) {
-                width: 100%;
-            }
-
-            /* Keep your existing mobile styles with box-sizing added */
+            /* Auth and Driver layout fixes */
             .auth-controls { flex-direction: column; width: 100%; }
             input[type="password"] { width: 100%; box-sizing: border-box; }
             .login-btn { width: 100%; margin-left: 0; box-sizing: border-box; }
+            
             .driver-grid { flex-direction: column; align-items: center; gap: 20px; }
-            .driver-card { width: 100%; max-width: 280px; }
+            .driver-card { width: 100%; max-width: 280px; box-sizing: border-box; }
         }
     </style>
 </head>
