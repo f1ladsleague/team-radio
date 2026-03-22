@@ -1,36 +1,31 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>OBS Radio Receiver</title>
+    <title>Pitwall Receiver</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <style>
-        body { background: transparent; color: #00D7B6; font-family: sans-serif; padding: 10px; font-weight: bold; }
-        #box { background: rgba(0,0,0,0.8); padding: 10px; border-radius: 5px; border-left: 5px solid #00D7B6; display: inline-block; min-width: 200px; text-transform: uppercase; }
+        body { background: transparent; color: #00D7B6; font-family: monospace; padding: 10px; font-weight: bold; font-size: 14px; }
+        #box { background: rgba(0,0,0,0.85); padding: 12px; border-radius: 4px; border-left: 5px solid #00D7B6; display: inline-block; min-width: 250px; text-transform: uppercase; letter-spacing: 1px; }
         .busy { border-left-color: #ff4444 !important; color: #ff4444 !important; }
     </style>
 </head>
 <body>
-    <div id="box">📻 RADIO TOWER: STARTING...</div>
+    <div id="box">[ SYS ] INITIALIZING RECEIVER...</div>
 
     <script>
-        // --- 1. FIREBASE SETUP ---
         const firebaseConfig = {
             apiKey: "AIzaSyCCiZwdBkZBZubr8oVsG8hkNE-x2iq3HJ0",
             authDomain: "f1-lads-team-radio-589fc.firebaseapp.com",
             databaseURL: "https://f1-lads-team-radio-589fc-default-rtdb.asia-southeast1.firebasedatabase.app/",
             projectId: "f1-lads-team-radio-589fc",
-            storageBucket: "f1-lads-team-radio-589fc.firebasestorage.app",
-            messagingSenderId: "449577983062",
-            appId: "1:449577983062:web:db65755d30d1c6a14ceff7"
+            storageBucket: "f1-lads-team-radio-589fc.firebasestorage.app"
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // --- 2. AUDIO STING SETUP ---
         const GITHUB_BASE_URL = "https://raw.githubusercontent.com/f1ladsleague/team-radio/main/F1-Radio-System/";
-        
         const stingFiles = {
             "Mercedes": "MercedesTeamRadio.mp3",
             "Red Bull": "RedBullTeamRadio.mp3",
@@ -39,64 +34,49 @@
             "Aston Martin": "AstonMartinTeamRadio.mp3"
         };
 
-        const peer = new Peer('f1lads-hq-tower-8844');
-        const box = document.getElementById('box');
-        
-        // Setup Web Audio API (Only for Delay now, no distortion)
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        // Determine which tower this is based on the URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const TOWER_ID = urlParams.get('tower') || 'f1lads-tower-obs'; // Defaults to OBS if no parameter is provided
 
-        peer.on('open', () => { box.innerText = "📻 RADIO TOWER: LIVE"; });
+        const peer = new Peer(TOWER_ID);
+        const box = document.getElementById('box');
+
+        peer.on('open', () => { 
+            box.innerText = `[ SYS ] ${TOWER_ID} : AWAITING SIGNAL`; 
+        });
 
         peer.on('call', (call) => {
             call.answer(); 
             
             call.on('stream', (remoteStream) => {
-                // Wake up the browser audio
-                if (audioCtx.state === 'suspended') {
-                    audioCtx.resume();
-                }
+                const remoteAudio = new Audio();
+                remoteAudio.srcObject = remoteStream;
+                remoteAudio.play().catch(e => console.error(e));
 
-                // Prevent Stream Garbage Collection (Hidden muted audio tag)
-                const hiddenAudio = new Audio();
-                hiddenAudio.srcObject = remoteStream;
-                hiddenAudio.muted = true; 
-                hiddenAudio.play().catch(e => console.warn("Hidden audio block:", e));
-
-                // Ask Firebase exactly who is calling RIGHT NOW
                 db.ref('radioState').once('value').then((snapshot) => {
                     const data = snapshot.val();
-                    const actualTeam = (data && data.team) ? data.team : "Mercedes"; 
+                    const actualTeam = (data && data.team) ? data.team : "UNKNOWN"; 
 
-                    box.innerText = `🎙️ INCOMING: ${actualTeam}`;
+                    box.innerText = `[ RX ] RECEIVING: ${actualTeam}`;
                     box.classList.add('busy');
 
-                    // Play the formal Intro Sting
-                    const stingUrl = GITHUB_BASE_URL + stingFiles[actualTeam];
-                    const stingAudio = new Audio(stingUrl);
-                    stingAudio.volume = 1.0;
-                    stingAudio.play().catch(e => console.error("Sting block:", e));
-
-                    // Route the mic through the delay (Clean Audio)
-                    const source = audioCtx.createMediaStreamSource(remoteStream);
-                    const delayNode = audioCtx.createDelay(5.0); 
-                    delayNode.delayTime.value = 1.5; // Holds mic for 1.5 seconds
-                    
-                    // Connect directly: Mic -> Delay Buffer -> OBS Output
-                    source.connect(delayNode);
-                    delayNode.connect(audioCtx.destination);
+                    if (stingFiles[actualTeam]) {
+                        const stingUrl = GITHUB_BASE_URL + stingFiles[actualTeam];
+                        const stingAudio = new Audio(stingUrl);
+                        stingAudio.play().catch(e => console.error("Sting block:", e));
+                    }
 
                     call.on('close', () => {
-                        source.disconnect();
-                        hiddenAudio.pause();
-                        hiddenAudio.srcObject = null;
-                        box.innerText = "📻 RADIO TOWER: LIVE";
+                        remoteAudio.pause();
+                        remoteAudio.srcObject = null;
+                        box.innerText = `[ SYS ] ${TOWER_ID} : AWAITING SIGNAL`;
                         box.classList.remove('busy');
                     });
                 });
             });
         });
 
-        peer.on('error', (err) => { box.innerText = "❌ PEER ERROR: " + err.type; });
+        peer.on('error', (err) => { box.innerText = `[ ERR ] PEER FAILURE: ${err.type}`; });
     </script>
 </body>
 </html>
