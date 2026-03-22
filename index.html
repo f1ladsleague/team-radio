@@ -42,11 +42,9 @@
 
         #driver-section { display: none; text-align: center; }
         #radio-check-btn { display: none; background: #555; color: white; border: 2px solid #777; padding: 12px 25px; border-radius: 6px; font-weight: 900; font-size: 14px; text-transform: uppercase; cursor: pointer; margin: 0 auto 25px auto; transition: 0.3s; width: 100%; max-width: 300px; }
-        #radio-check-btn:hover { background: #777; }
         #radio-check-btn.active { background: #e10600; border-color: #ff4444; box-shadow: 0 0 15px rgba(225, 6, 0, 0.5); }
 
         .driver-grid { display: flex; justify-content: center; gap: 30px; }
-        
         .driver-card { background: #0a0a0f; border: 2px solid #222; border-radius: 8px; overflow: hidden; width: 220px; cursor: pointer; transition: 0.3s; position: relative; }
         .driver-card.disabled { opacity: 0.4; filter: grayscale(100%); cursor: not-allowed; pointer-events: none; }
         .driver-card:hover:not(.disabled) { transform: translateY(-5px); border-color: #555; }
@@ -63,12 +61,10 @@
         @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1); } }
 
         @media (max-width: 768px) {
-            .dash-header { flex-direction: column; text-align: center; }
-            .telemetry-status { font-size: 14px; padding: 6px 10px; }
             .team-grid { flex-direction: column; gap: 10px; } 
-            .team-btn { width: 100%; box-sizing: border-box; padding: 20px; }
+            .team-btn { width: 100%; padding: 20px; }
             .auth-controls { flex-direction: column; width: 100%; }
-            input[type="password"] { width: 100%; box-sizing: border-box; }
+            input[type="password"] { width: 100%; }
             .login-btn { width: 100%; margin-left: 0; }
             .driver-grid { flex-direction: column; align-items: center; gap: 20px; }
             .driver-card { width: 100%; max-width: 280px; }
@@ -120,7 +116,6 @@
     </div>
 
     <script>
-        // --- FIREBASE CONFIG ---
         const firebaseConfig = {
             apiKey: "AIzaSyCCiZwdBkZBZubr8oVsG8hkNE-x2iq3HJ0",
             authDomain: "f1-lads-team-radio-589fc.firebaseapp.com",
@@ -133,61 +128,41 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // --- WEBRTC AUDIO STATE ---
-        const peer = new Peer(); // The engineer's random ID
+        const peer = new Peer(); 
         let localMicStream = null;
         let activeCall = null;
+        let lineIsBusy = false;
 
-        let currentTeam = null; let currentHex = null; let currentPass = null; 
-        let currentDrivers = []; let currentFileSuffix = null; let currentLogo = null;
-        let activeDriverFile = null; let safetyTimer = null;
-
-        let raceState = "PRE-RACE"; 
-        let currentLap = 0;
-        let lastTransmittedLap = -1;
+        let currentTeam = null, currentHex = null, currentPass = null, currentDrivers = [], currentFileSuffix = null, currentLogo = null;
+        let activeDriverFile = null, safetyTimer = null, raceState = "PRE-RACE", currentLap = 0, lastTransmittedLap = -1;
 
         function selectTeam(name, hex, pass, drivers, suffix, logoFile) {
             if(activeDriverFile) return; 
             currentTeam = name; currentHex = hex; currentPass = pass; 
             currentDrivers = drivers; currentFileSuffix = suffix; currentLogo = logoFile;
-
             document.querySelectorAll('.team-btn').forEach(btn => btn.classList.remove('selected'));
             event.currentTarget.classList.add('selected');
             document.documentElement.style.setProperty('--theme-color', hex);
-            
             document.getElementById('auth-section').style.display = 'block';
-            document.getElementById('team-pass').value = '';
-            document.getElementById('team-pass').focus();
         }
 
         async function authenticate() {
-            const input = document.getElementById('team-pass').value;
-            if (input === currentPass) {
-                
-                // 1. Ask for Microphone Permissions Immediately upon unlock
+            if (document.getElementById('team-pass').value === currentPass) {
                 try {
-                    localMicStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                    console.log("Mic access granted!");
+                    localMicStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 } catch (err) {
-                    alert("⚠️ MIC ACCESS DENIED. The visual graphic will work, but your voice will not be broadcasted. Please allow microphone permissions in your browser.");
+                    alert("⚠️ Mic access denied. Audio will not be transmitted.");
                 }
-
-                // 2. Build the UI
                 document.getElementById('auth-section').style.display = 'none';
                 document.getElementById('team-grid').style.display = 'none';
                 document.getElementById('main-dash').classList.add('logged-in');
-                
                 const logoEl = document.getElementById('active-team-logo');
                 logoEl.src = `https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/${currentLogo}`;
                 logoEl.style.display = 'block';
-                
                 buildDriverGrid();
                 document.getElementById('driver-section').style.display = 'block';
-                
                 evaluateTelemetryState();
-            } else {
-                alert("ACCESS DENIED");
-            }
+            } else { alert("ACCESS DENIED"); }
         }
 
         function buildDriverGrid() {
@@ -198,137 +173,89 @@
                     <div class="driver-card" id="card-${driver.f}" onclick="toggleRadio('${driver.f}', '${driver.d}')">
                         <div class="live-led"></div>
                         <div class="driver-photo-wrap">
-                            <img src="https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/${driver.f}.png" class="driver-photo" onerror="this.style.display='none'">
+                            <img src="https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/${driver.f}.png" class="driver-photo">
                         </div>
                         <h3 class="driver-name">${driver.d}</h3>
-                    </div>
-                `;
+                    </div>`;
             });
-        }
-
-        function performRadioCheck() {
-            if (raceState !== "PRE-RACE") return;
-            
-            const testDriver = currentDrivers[0];
-            updateTelemetry("[ RADIO CHECK ACTIVE ]", "#e10600");
-            
-            // Send visual to Firebase
-            db.ref('radioState').set({
-                active: true,
-                team: currentTeam,
-                video: `${testDriver.f}_${currentFileSuffix}.webm`, // You can eventually remove the video suffix if you just use a generic overlay!
-                timestamp: Date.now()
-            });
-
-            // Send Live Audio Call to OBS
-            if (localMicStream) {
-                activeCall = peer.call('f1-lads-obs-receiver-v1', localMicStream);
-            }
-
-            setTimeout(() => {
-                db.ref('radioState').update({ active: false });
-                if (activeCall) { activeCall.close(); activeCall = null; }
-                evaluateTelemetryState(); 
-            }, 3000);
         }
 
         function toggleRadio(fileId, displayName) {
             if (activeDriverFile && activeDriverFile !== fileId) return; 
-            
             const card = document.getElementById(`card-${fileId}`);
             
             if (!activeDriverFile) {
+                if (lineIsBusy) { updateTelemetry("[ LINE BUSY - WAIT ]", "#ff4444"); return; }
                 if (raceState === "PRE-RACE" || currentLap < 3 || currentLap === lastTransmittedLap) return;
 
-                // --- GOING ON AIR ---
                 activeDriverFile = fileId;
                 card.classList.add('active');
                 lastTransmittedLap = currentLap; 
-                updateTelemetry(`[ ON AIR : ${displayName.toUpperCase()} ]`, "#ff4444");
                 
-                // 1. Trigger the TV Graphic via Firebase
                 db.ref('radioState').set({
-                    active: true,
-                    team: currentTeam,
-                    video: `${fileId}_${currentFileSuffix}.webm`,
-                    timestamp: Date.now()
+                    active: true, team: currentTeam, driver: displayName,
+                    video: `${fileId}_${currentFileSuffix}.webm`, timestamp: Date.now()
                 });
 
-                // 2. Open the WebRTC Live Audio connection to OBS
-                if (localMicStream) {
-                    activeCall = peer.call('f1-lads-obs-receiver-v1', localMicStream);
-                }
-
-                // Auto-Hangup after 12 seconds
+                if (localMicStream) { activeCall = peer.call('f1lads-hq-tower-8844', localMicStream); }
                 safetyTimer = setTimeout(() => { if(activeDriverFile) toggleRadio(activeDriverFile, displayName); }, 12000);
-            
             } else {
-                // --- GOING OFF AIR ---
                 clearTimeout(safetyTimer);
                 activeDriverFile = null;
                 card.classList.remove('active');
-                
-                // 1. Hide TV Graphic
                 db.ref('radioState').update({ active: false });
-                
-                // 2. Hang up the live audio call
-                if (activeCall) {
-                    activeCall.close();
-                    activeCall = null;
-                }
-                
+                if (activeCall) { activeCall.close(); activeCall = null; }
                 evaluateTelemetryState();
             }
         }
 
         function updateTelemetry(text, color = "#888") {
             const tel = document.getElementById('telemetry');
-            tel.innerText = text;
-            tel.style.color = color;
-            tel.style.borderColor = color === "#888" ? "#222" : color;
+            tel.innerText = text; tel.style.color = color; tel.style.borderColor = color === "#888" ? "#222" : color;
         }
 
         function evaluateTelemetryState() {
             const checkBtn = document.getElementById('radio-check-btn');
             const cards = document.querySelectorAll('.driver-card');
-
             if (raceState === "PRE-RACE") {
                 updateTelemetry("[ PRE-RACE : RADIO CHECK OPEN ]", "#00D7B6");
                 if(checkBtn) { checkBtn.style.display = "block"; checkBtn.classList.add("active"); }
                 cards.forEach(c => c.classList.add('disabled')); 
-            } else if (raceState === "RACING") {
+            } else {
                 if(checkBtn) checkBtn.style.display = "none";
-                
                 if (currentLap < 3) {
-                    updateTelemetry(`[ IN RACE : LOCKED UNTIL LAP 3 (LAP ${currentLap}) ]`, "#ff4444");
+                    updateTelemetry(`[ LOCKED UNTIL LAP 3 (L${currentLap}) ]`, "#ff4444");
                     cards.forEach(c => c.classList.add('disabled'));
                 } else if (currentLap === lastTransmittedLap) {
-                    updateTelemetry(`[ IN RACE : LAP ${currentLap} COMMS USED ]`, "#F47600");
+                    updateTelemetry(`[ LAP ${currentLap} COMMS USED ]`, "#F47600");
                     cards.forEach(c => c.classList.add('disabled'));
                 } else {
-                    updateTelemetry(`[ IN RACE : LAP ${currentLap} COMMS READY ]`, "#00D7B6");
+                    updateTelemetry(`[ LAP ${currentLap} COMMS READY ]`, "#00D7B6");
                     cards.forEach(c => c.classList.remove('disabled'));
                 }
             }
         }
 
-        db.ref('telemetryState').on('value', (snapshot) => {
-            const data = snapshot.val();
-            if (!data) return;
-
-            if (data.state === "RACING" && raceState === "PRE-RACE") {
-                raceState = "RACING";
-            }
-            
-            if (data.lap && data.lap !== currentLap) {
-                if (data.lap < currentLap) lastTransmittedLap = -1;
-                currentLap = data.lap;
-                if (!activeDriverFile) evaluateTelemetryState();
+        db.ref('radioState').on('value', (snapshot) => {
+            const radio = snapshot.val();
+            if (radio && radio.active && radio.team !== currentTeam) {
+                lineIsBusy = true;
+                updateTelemetry(`[ LINE BUSY: ${radio.team.toUpperCase()} ]`, "#ff4444");
+                document.querySelectorAll('.driver-card').forEach(c => c.classList.add('disabled'));
+            } else if (radio && !radio.active) {
+                lineIsBusy = false;
+                evaluateTelemetryState();
             }
         });
 
-        evaluateTelemetryState();
-
+        db.ref('telemetryState').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data && data.lap && data.lap !== currentLap) {
+                if (data.lap < currentLap) lastTransmittedLap = -1;
+                currentLap = data.lap; raceState = data.state;
+                if (!activeDriverFile) evaluateTelemetryState();
+            }
+        });
     </script>
 </body>
 </html>
