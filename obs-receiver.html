@@ -28,20 +28,9 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // Keep track of who is currently calling
-        let currentTeam = "Mercedes";
-        db.ref('radioState').on('value', (snapshot) => {
-            const data = snapshot.val();
-            if (data && data.active) {
-                currentTeam = data.team;
-            }
-        });
-
         // --- 2. AUDIO STING SETUP ---
-        // Pulling raw audio directly from your specific folder
         const GITHUB_BASE_URL = "https://raw.githubusercontent.com/f1ladsleague/team-radio/main/F1-Radio-System/";
         
-        // Map the team names to your new MP3 files
         const stingFiles = {
             "Mercedes": "MercedesTeamRadio.mp3",
             "Red Bull": "RedBullTeamRadio.mp3",
@@ -72,46 +61,63 @@
         peer.on('open', () => { box.innerText = "📻 RADIO TOWER: LIVE"; });
 
         peer.on('call', (call) => {
-            box.innerText = `🎙️ INCOMING: ${currentTeam}`;
-            box.classList.add('busy');
             call.answer(); 
             
-            // 1. Play the Team Intro Sting IMMEDIATELY (Clean Audio, no distortion)
-            const stingUrl = GITHUB_BASE_URL + stingFiles[currentTeam];
-            const stingAudio = new Audio(stingUrl);
-            stingAudio.volume = 1.0;
-            stingAudio.play().catch(e => console.error("Audio block:", e));
-            
-            // 2. Process the incoming Engineer microphone
             call.on('stream', (remoteStream) => {
-                const source = audioCtx.createMediaStreamSource(remoteStream);
-                
-                // --- THE MAGIC DELAY BUFFER ---
-                // Buffers the mic audio for exactly 1.5 seconds to match your track length
-                const delayNode = audioCtx.createDelay(5.0); 
-                delayNode.delayTime.value = 1.5; 
-                
-                // Radio EQ
-                const bandpass = audioCtx.createBiquadFilter();
-                bandpass.type = "bandpass";
-                bandpass.frequency.value = 1200; 
-                bandpass.Q.value = 1.2;
+                // --- FIX 1: WAKE UP THE BROWSER AUDIO ---
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
 
-                // Radio Crackle/Distortion
-                const distortion = audioCtx.createWaveShaper();
-                distortion.curve = makeDistortionCurve(40); 
-                distortion.oversample = '4x';
+                // --- FIX 2: PREVENT STREAM GARBAGE COLLECTION ---
+                // We map the stream to a hidden HTML tag, but MUTE it so we only hear the filtered version
+                const hiddenAudio = new Audio();
+                hiddenAudio.srcObject = remoteStream;
+                hiddenAudio.muted = true; 
+                hiddenAudio.play().catch(e => console.warn("Hidden audio block:", e));
 
-                // Connect the chain: Mic -> Delay Buffer -> EQ -> Distortion -> OBS Output
-                source.connect(delayNode);
-                delayNode.connect(bandpass);
-                bandpass.connect(distortion);
-                distortion.connect(audioCtx.destination);
+                // --- FIX 3: THE RACE CONDITION ---
+                // We ask Firebase exactly who is calling RIGHT NOW, avoiding stale data
+                db.ref('radioState').once('value').then((snapshot) => {
+                    const data = snapshot.val();
+                    const actualTeam = (data && data.team) ? data.team : "Mercedes"; // Fallback to Mercedes just in case
 
-                call.on('close', () => {
-                    source.disconnect();
-                    box.innerText = "📻 RADIO TOWER: LIVE";
-                    box.classList.remove('busy');
+                    box.innerText = `🎙️ INCOMING: ${actualTeam}`;
+                    box.classList.add('busy');
+
+                    // Play the correct formal Intro Sting
+                    const stingUrl = GITHUB_BASE_URL + stingFiles[actualTeam];
+                    const stingAudio = new Audio(stingUrl);
+                    stingAudio.volume = 1.0;
+                    stingAudio.play().catch(e => console.error("Sting block:", e));
+
+                    // Route the mic through the delay and filter
+                    const source = audioCtx.createMediaStreamSource(remoteStream);
+                    
+                    const delayNode = audioCtx.createDelay(5.0); 
+                    delayNode.delayTime.value = 1.5; // Exactly 1.5 seconds delay
+                    
+                    const bandpass = audioCtx.createBiquadFilter();
+                    bandpass.type = "bandpass";
+                    bandpass.frequency.value = 1200; 
+                    bandpass.Q.value = 1.2;
+
+                    const distortion = audioCtx.createWaveShaper();
+                    distortion.curve = makeDistortionCurve(40); 
+                    distortion.oversample = '4x';
+
+                    source.connect(delayNode);
+                    delayNode.connect(bandpass);
+                    bandpass.connect(distortion);
+                    distortion.connect(audioCtx.destination);
+
+                    call.on('close', () => {
+                        source.disconnect();
+                        hiddenAudio.pause();
+                        hiddenAudio.srcObject = null;
+                        box.innerText = "📻 RADIO TOWER: LIVE";
+                        box.classList.remove('busy');
+                    });
                 });
             });
         });
