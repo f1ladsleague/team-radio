@@ -229,25 +229,32 @@
         function performDriverCheck(fileId, displayName) {
             if (lineIsBusy) { alert("Wait a second, the line is busy with another team!"); return; }
             if (!localMicStream) { alert("⚠️ Microphone not connected!"); return; }
-
+        
             const btn = document.getElementById(`check-${fileId}`);
             const originalText = `Radio Check ${displayName}`;
+            
+            // Grab the banner elements
+            const liveBanner = document.getElementById('live-banner');
+            const countdownEl = document.getElementById('live-countdown');
             let timeLeft = 5;
             
-            // Set initial state
+            // Show the banner and set initial time
+            liveBanner.style.display = 'block';
+            countdownEl.innerText = timeLeft;
+        
             btn.innerText = `🎙️ TESTING (${timeLeft}s)...`;
             btn.classList.add('active-check');
             document.querySelectorAll('.driver-check-btn').forEach(b => b.style.pointerEvents = "none");
-
-            // Start the countdown interval
+        
             clearInterval(testCountdownInterval);
             testCountdownInterval = setInterval(() => {
                 timeLeft--;
-                if(timeLeft > 0) {
+                if(timeLeft >= 0) {
                     btn.innerText = `🎙️ TESTING (${timeLeft}s)...`;
+                    countdownEl.innerText = timeLeft; // Update the banner countdown too!
                 }
             }, 1000);
-
+        
             db.ref('radioState').set({
                 active: true, 
                 team: currentTeam, 
@@ -255,13 +262,16 @@
                 video: `${fileId}_${currentFileSuffix}.webm`, 
                 timestamp: Date.now()
             });
-
+        
             activeCall = peer.call('f1lads-hq-tower-8844', localMicStream);
-
+        
             setTimeout(() => {
                 clearInterval(testCountdownInterval);
                 db.ref('radioState').update({ active: false });
                 if (activeCall) { activeCall.close(); activeCall = null; }
+                
+                // Hide the banner when the test finishes
+                liveBanner.style.display = 'none';
                 
                 btn.innerText = originalText;
                 btn.classList.remove('active-check');
