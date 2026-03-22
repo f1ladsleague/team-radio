@@ -4,47 +4,40 @@
     <title>OBS Radio Receiver</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { background: transparent; color: #00D7B6; font-family: monospace; padding: 20px; font-weight: bold; font-size: 18px; }
-        .error { color: #ff4444; }
+        body { background: transparent; color: #00D7B6; font-family: sans-serif; padding: 10px; font-weight: bold; }
+        #box { background: rgba(0,0,0,0.8); padding: 10px; border-radius: 5px; border-left: 5px solid #00D7B6; display: inline-block; min-width: 200px; }
+        .busy { border-left-color: #ff4444 !important; color: #ff4444 !important; }
     </style>
 </head>
 <body>
-    <div id="status">📻 Starting Radio Tower...</div>
+    <div id="box">📻 RADIO TOWER: STARTING...</div>
     <div id="audio-container"></div>
 
     <script>
-        // We give OBS a fixed, permanent "Phone Number" so the dashboard knows who to call
-        const peer = new Peer('f1-lads-obs-receiver-v1');
+        const peer = new Peer('f1lads-hq-tower-8844');
+        const box = document.getElementById('box');
 
-        peer.on('open', (id) => {
-            document.getElementById('status').innerText = "✅ LIVE & LISTENING (ID: " + id + ")";
-        });
+        peer.on('open', () => { box.innerText = "📻 RADIO TOWER: LIVE"; });
 
-        // When an engineer presses the Radio button on their phone:
         peer.on('call', (call) => {
-            console.log("Incoming transmission...");
-            
-            // Auto-answer the call (without sending OBS audio back to the engineer)
+            box.innerText = "🎙️ INCOMING TRANSMISSION...";
+            box.classList.add('busy');
             call.answer(); 
-
-            // When the audio stream arrives, play it!
             call.on('stream', (remoteStream) => {
                 const audio = document.createElement('audio');
                 audio.srcObject = remoteStream;
                 audio.autoplay = true;
                 document.getElementById('audio-container').appendChild(audio);
 
-                // When the 12 second timer ends and the dashboard hangs up, delete the audio player
                 call.on('close', () => {
                     audio.remove();
+                    box.innerText = "📻 RADIO TOWER: LIVE";
+                    box.classList.remove('busy');
                 });
             });
         });
-        
-        peer.on('error', (err) => {
-            document.getElementById('status').innerText = "❌ ERROR: " + err.type;
-            document.getElementById('status').className = "error";
-        });
+
+        peer.on('error', (err) => { box.innerText = "❌ PEER ERROR: " + err.type; });
     </script>
 </body>
 </html>
