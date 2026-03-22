@@ -42,21 +42,8 @@
         const peer = new Peer('f1lads-hq-tower-8844');
         const box = document.getElementById('box');
         
-        // Setup Web Audio API for Radio Distortion + Delay
+        // Setup Web Audio API (Only for Delay now, no distortion)
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-        function makeDistortionCurve(amount) {
-            let k = typeof amount === 'number' ? amount : 50,
-                n_samples = 44100,
-                curve = new Float32Array(n_samples),
-                deg = Math.PI / 180,
-                i = 0, x;
-            for ( ; i < n_samples; ++i ) {
-                x = i * 2 / n_samples - 1;
-                curve[i] = ( 3 + k ) * x * 20 * deg / ( Math.PI + k * Math.abs(x) );
-            }
-            return curve;
-        }
 
         peer.on('open', () => { box.innerText = "📻 RADIO TOWER: LIVE"; });
 
@@ -64,52 +51,39 @@
             call.answer(); 
             
             call.on('stream', (remoteStream) => {
-                // --- FIX 1: WAKE UP THE BROWSER AUDIO ---
+                // Wake up the browser audio
                 if (audioCtx.state === 'suspended') {
                     audioCtx.resume();
                 }
 
-                // --- FIX 2: PREVENT STREAM GARBAGE COLLECTION ---
-                // We map the stream to a hidden HTML tag, but MUTE it so we only hear the filtered version
+                // Prevent Stream Garbage Collection (Hidden muted audio tag)
                 const hiddenAudio = new Audio();
                 hiddenAudio.srcObject = remoteStream;
                 hiddenAudio.muted = true; 
                 hiddenAudio.play().catch(e => console.warn("Hidden audio block:", e));
 
-                // --- FIX 3: THE RACE CONDITION ---
-                // We ask Firebase exactly who is calling RIGHT NOW, avoiding stale data
+                // Ask Firebase exactly who is calling RIGHT NOW
                 db.ref('radioState').once('value').then((snapshot) => {
                     const data = snapshot.val();
-                    const actualTeam = (data && data.team) ? data.team : "Mercedes"; // Fallback to Mercedes just in case
+                    const actualTeam = (data && data.team) ? data.team : "Mercedes"; 
 
                     box.innerText = `🎙️ INCOMING: ${actualTeam}`;
                     box.classList.add('busy');
 
-                    // Play the correct formal Intro Sting
+                    // Play the formal Intro Sting
                     const stingUrl = GITHUB_BASE_URL + stingFiles[actualTeam];
                     const stingAudio = new Audio(stingUrl);
                     stingAudio.volume = 1.0;
                     stingAudio.play().catch(e => console.error("Sting block:", e));
 
-                    // Route the mic through the delay and filter
+                    // Route the mic through the delay (Clean Audio)
                     const source = audioCtx.createMediaStreamSource(remoteStream);
-                    
                     const delayNode = audioCtx.createDelay(5.0); 
-                    delayNode.delayTime.value = 1.5; // Exactly 1.5 seconds delay
+                    delayNode.delayTime.value = 1.5; // Holds mic for 1.5 seconds
                     
-                    const bandpass = audioCtx.createBiquadFilter();
-                    bandpass.type = "bandpass";
-                    bandpass.frequency.value = 1200; 
-                    bandpass.Q.value = 1.2;
-
-                    const distortion = audioCtx.createWaveShaper();
-                    distortion.curve = makeDistortionCurve(40); 
-                    distortion.oversample = '4x';
-
+                    // Connect directly: Mic -> Delay Buffer -> OBS Output
                     source.connect(delayNode);
-                    delayNode.connect(bandpass);
-                    bandpass.connect(distortion);
-                    distortion.connect(audioCtx.destination);
+                    delayNode.connect(audioCtx.destination);
 
                     call.on('close', () => {
                         source.disconnect();
