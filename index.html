@@ -11,87 +11,96 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     
-    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Titillium+Web:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Share+Tech+Mono&family=Titillium+Web:wght@400;700;900&display=swap" rel="stylesheet">
     
     <style>
-        :root { --f1-dark: #0e0e14; --f1-card: #15151e; --f1-border: #2a2a35; --theme-color: #444; }
+        :root { --f1-dark: #09090c; --f1-card: #111118; --f1-border: #22222d; --theme-color: #444; }
         body { font-family: 'Titillium Web', sans-serif; background: var(--f1-dark); color: white; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
         
         .brand-header { margin-bottom: 25px; margin-top: 10px; }
         .brand-logo { height: 75px; object-fit: contain; }
 
-        .dashboard { width: 100%; max-width: 900px; background: var(--f1-card); padding: 30px; border-radius: 12px; border: 1px solid var(--f1-border); border-top: 6px solid var(--theme-color); box-shadow: 0 10px 40px rgba(0,0,0,0.8); transition: all 0.4s ease; box-sizing: border-box; }
+        .dashboard { width: 100%; max-width: 900px; background: var(--f1-card); padding: 30px; border-radius: 8px; border: 1px solid var(--f1-border); border-top: 4px solid var(--theme-color); box-shadow: 0 10px 40px rgba(0,0,0,0.9); transition: all 0.4s ease; box-sizing: border-box; position: relative; }
+        .dashboard::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.01) 2px, rgba(255,255,255,0.01) 4px); pointer-events: none; border-radius: 8px; }
         .dashboard.logged-in { max-width: 600px; }
 
         .dash-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--f1-border); padding-bottom: 15px; margin-bottom: 25px; gap: 15px; }
         #active-team-logo { display: none; height: 45px; object-fit: contain; }
 
-        .telemetry-status { font-family: 'Chakra Petch', monospace; color: #888; font-size: 16px; background: #0a0a0f; padding: 8px 15px; border-radius: 4px; border: 1px solid #222; text-align: center; white-space: nowrap; font-weight: 700; }
+        .telemetry-status { font-family: 'Share Tech Mono', monospace; color: #888; font-size: 16px; background: #050508; padding: 8px 15px; border-radius: 4px; border: 1px solid #333; text-align: center; white-space: nowrap; font-weight: 400; letter-spacing: 1px; }
 
         .team-grid { display: flex; flex-wrap: nowrap; gap: 15px; justify-content: space-between; margin-bottom: 25px; transition: 0.3s; }
-        .team-btn { flex: 1; background: #0a0a0f; border: 2px solid #222; border-radius: 8px; padding: 15px 10px; cursor: pointer; transition: 0.3s; display: flex; justify-content: center; align-items: center; filter: grayscale(100%) opacity(0.4); }
-        .team-btn:hover { filter: grayscale(50%) opacity(0.8); background: #111; }
+        .team-btn { flex: 1; background: #050508; border: 1px solid #333; border-radius: 6px; padding: 15px 10px; cursor: pointer; transition: 0.3s; display: flex; justify-content: center; align-items: center; filter: grayscale(100%) opacity(0.4); }
+        .team-btn:hover { filter: grayscale(50%) opacity(0.8); background: #111; border-color: #555; }
         .team-btn.selected { filter: grayscale(0%) opacity(1); border-color: var(--theme-color); box-shadow: inset 0 0 15px rgba(255,255,255,0.05); background: #1a1a24; }
         .team-logo { height: 35px; width: auto; max-width: 100%; object-fit: contain; }
 
-        #auth-section { display: none; text-align: center; margin-top: 20px; background: #0a0a0f; padding: 30px; border-radius: 8px; border: 1px dashed var(--f1-border); }
+        #auth-section { display: none; text-align: center; margin-top: 20px; background: #050508; padding: 30px; border-radius: 6px; border: 1px dashed var(--f1-border); }
         .auth-controls { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 15px; }
-        input[type="password"] { padding: 15px; width: 250px; border-radius: 6px; border: 1px solid var(--theme-color); background: #000; color: white; font-family: 'Chakra Petch', monospace; font-size: 18px; text-align: center; outline: none; }
-        .login-btn { padding: 15px 30px; background: var(--theme-color); color: #fff; border: none; border-radius: 6px; font-weight: 900; font-size: 16px; cursor: pointer; transition: 0.2s; text-transform: uppercase; }
+        input[type="password"] { padding: 15px; width: 250px; border-radius: 4px; border: 1px solid var(--theme-color); background: #000; color: white; font-family: 'Share Tech Mono', monospace; font-size: 18px; text-align: center; outline: none; }
+        .login-btn { padding: 15px 30px; background: var(--theme-color); color: #fff; border: none; border-radius: 4px; font-weight: 900; font-size: 16px; cursor: pointer; transition: 0.2s; text-transform: uppercase; }
         .login-btn:hover { filter: brightness(1.2); }
 
         #driver-section { display: none; text-align: center; }
 
-        /* --- NEW LIVE BANNER CSS --- */
+        /* --- PITWALL TELEMETRY BANNER --- */
         #live-banner {
             display: none;
-            background: #e10600;
-            color: white;
-            padding: 15px;
-            text-align: center;
-            font-size: 22px;
-            font-weight: 900;
-            text-transform: uppercase;
-            border-radius: 8px;
+            background: #0a0000;
+            border: 1px solid #ff0000;
+            border-left: 5px solid #ff0000;
+            border-radius: 4px;
             margin-bottom: 25px;
-            box-shadow: 0 0 20px rgba(225, 6, 0, 0.4);
-            border: 2px solid #ff4444;
-            letter-spacing: 1px;
+            box-shadow: 0 0 15px rgba(225, 6, 0, 0.2), inset 0 0 20px rgba(255, 0, 0, 0.1);
             width: 100%;
             box-sizing: border-box;
+            padding: 12px 20px;
+            justify-content: space-between;
+            align-items: center;
+            font-family: 'Share Tech Mono', monospace;
         }
-        .blinking-dot {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            background-color: white;
-            border-radius: 50%;
-            margin-right: 10px;
-            vertical-align: middle;
-            animation: pulse 1s infinite;
-        }
-        /* --------------------------- */
+        
+        .banner-left { display: flex; align-items: center; gap: 15px; text-align: left; }
+        .banner-right { text-align: right; }
+        
+        .data-label { color: #888; font-size: 11px; display: block; letter-spacing: 2px; margin-bottom: 2px; font-family: 'Chakra Petch', sans-serif; font-weight: 700; }
+        .data-value { color: #ff4444; font-size: 22px; text-shadow: 0 0 8px rgba(255, 0, 0, 0.6); line-height: 1; }
+        
+        #live-countdown { font-size: 32px; color: #fff; text-shadow: 0 0 10px rgba(255, 255, 255, 0.5); }
+        .ms-unit { font-size: 16px; color: #aaa; margin-left: 2px; }
+
+        .blinking-dot { width: 14px; height: 14px; background-color: #ff0000; border-radius: 50%; box-shadow: 0 0 10px #ff0000; animation: flash 0.8s infinite alternate; }
+        @keyframes flash { from { opacity: 1; box-shadow: 0 0 15px #ff0000; } to { opacity: 0.2; box-shadow: 0 0 2px #ff0000; } }
+        /* -------------------------------- */
 
         .driver-grid { display: flex; justify-content: center; gap: 30px; }
         .driver-wrap { display: flex; flex-direction: column; gap: 10px; align-items: center; width: 220px; }
-        .driver-card { background: #0a0a0f; border: 2px solid #222; border-radius: 8px; overflow: hidden; width: 100%; cursor: pointer; transition: 0.3s; position: relative; }
-        .driver-card.disabled { opacity: 0.4; filter: grayscale(100%); cursor: not-allowed; pointer-events: none; }
-        .driver-card:hover:not(.disabled) { transform: translateY(-5px); border-color: #555; }
         
-        .driver-photo-wrap { width: 100%; height: 220px; background-color: var(--theme-color); position: relative; border-bottom: 2px solid #222; }
+        .driver-card { background: #050508; border: 1px solid #222; border-radius: 6px; overflow: hidden; width: 100%; cursor: pointer; transition: 0.3s; position: relative; }
+        .driver-card.disabled { opacity: 0.3; filter: grayscale(100%); cursor: not-allowed; pointer-events: none; }
+        .driver-card:hover:not(.disabled) { transform: translateY(-3px); border-color: #555; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        
+        .driver-photo-wrap { width: 100%; height: 220px; background-color: var(--theme-color); position: relative; border-bottom: 1px solid #222; }
         .driver-photo { width: 100%; height: 100%; object-fit: cover; object-position: top center; mix-blend-mode: normal; }
-        .driver-name { padding: 15px; font-size: 22px; font-weight: 900; text-transform: uppercase; margin: 0; text-align: center; background: #0a0a0f; }
+        .driver-name { padding: 12px; font-size: 18px; font-weight: 900; text-transform: uppercase; margin: 0; text-align: center; background: #050508; letter-spacing: 1px; }
         
-        .driver-card.active { border-color: red; box-shadow: 0 0 25px rgba(255, 0, 0, 0.4); }
-        .driver-card.active .driver-name { background: #3a0000; color: #ff4444; }
-        .live-led { position: absolute; top: 15px; right: 15px; width: 15px; height: 15px; background: red; border-radius: 50%; box-shadow: 0 0 10px red; display: none; z-index: 10; }
-        .driver-card.active .live-led { display: block; animation: pulse 1s infinite; }
+        .driver-card.active { border-color: #ff0000; box-shadow: 0 0 20px rgba(255, 0, 0, 0.3); }
+        .driver-card.active .driver-name { background: #1a0000; color: #ff4444; }
+        
+        .live-led { position: absolute; top: 12px; right: 12px; width: 12px; height: 12px; background: #ff0000; border-radius: 50%; box-shadow: 0 0 10px #ff0000; display: none; z-index: 10; animation: flash 0.8s infinite alternate; }
+        .driver-card.active .live-led { display: block; }
 
-        .driver-check-btn { display: none; background: #555; color: white; border: 2px solid #777; padding: 10px 15px; border-radius: 6px; font-weight: 900; font-size: 13px; text-transform: uppercase; cursor: pointer; width: 100%; transition: 0.3s; }
-        .driver-check-btn:hover { background: #666; border-color: #888; }
-        .driver-check-btn.active-check { background: #e10600; border-color: #ff4444; box-shadow: 0 0 15px rgba(225, 6, 0, 0.5); }
-
-        @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1); } }
+        /* --- UPDATED BUTTON STYLE --- */
+        .driver-check-btn { 
+            display: none; background: #111; color: #aaa; border: 1px solid #444; 
+            padding: 10px; border-radius: 4px; font-family: 'Share Tech Mono', monospace; 
+            font-size: 14px; text-transform: uppercase; cursor: pointer; width: 100%; transition: 0.2s; 
+        }
+        .driver-check-btn:hover { background: #222; color: #fff; border-color: #666; }
+        .driver-check-btn.active-check { 
+            background: #1a0000; color: #ff4444; border-color: #ff0000; 
+            box-shadow: inset 0 0 10px rgba(255,0,0,0.2); 
+        }
 
         @media (max-width: 768px) {
             .dash-header { flex-direction: column; gap: 15px; }
@@ -103,7 +112,10 @@
             .login-btn { width: 100%; margin-left: 0; box-sizing: border-box; }
             .driver-grid { flex-direction: column; align-items: center; gap: 20px; }
             .driver-wrap { width: 100%; max-width: 280px; box-sizing: border-box; }
-            #live-banner { font-size: 16px; } /* Slightly smaller banner text on mobile */
+            
+            #live-banner { flex-direction: column; gap: 10px; text-align: center; }
+            .banner-left { justify-content: center; width: 100%; }
+            .banner-right { text-align: center; width: 100%; border-top: 1px solid #330000; padding-top: 10px; }
         }
     </style>
 </head>
@@ -138,16 +150,27 @@
         </div>
 
         <div id="auth-section">
-            <h3 style="margin-top:0; color: #888; font-weight: 600; text-transform: uppercase;">Awaiting Authentication</h3>
+            <h3 style="margin-top:0; color: #888; font-weight: 600; text-transform: uppercase; font-family: 'Chakra Petch', sans-serif;">Awaiting Auth</h3>
             <div class="auth-controls">
-                <input type="password" id="team-pass" placeholder="Password">
+                <input type="password" id="team-pass" placeholder="PASSWORD">
                 <button class="login-btn" onclick="authenticate()">Unlock</button>
             </div>
         </div>
 
         <div id="driver-section">
+            
             <div id="live-banner">
-                <span class="blinking-dot"></span> LIVE TRANSMISSION - <span id="live-countdown">12</span>s
+                <div class="banner-left">
+                    <div class="blinking-dot"></div>
+                    <div>
+                        <span class="data-label">COMMS STATUS</span>
+                        <span class="data-value">TX LIVE</span>
+                    </div>
+                </div>
+                <div class="banner-right">
+                    <span class="data-label">T-MINUS (WINDOW)</span>
+                    <span id="live-countdown">00.000</span><span class="ms-unit">s</span>
+                </div>
             </div>
             
             <div class="driver-grid" id="driver-container"></div>
@@ -175,9 +198,8 @@
         let currentTeam = null, currentHex = null, currentPass = null, currentDrivers = [], currentFileSuffix = null, currentLogo = null;
         let activeDriverFile = null, safetyTimer = null, raceState = "PRE-RACE", currentLap = 0, lastTransmittedLap = -1;
         
-        // New variables to track our interval timers
-        let testCountdownInterval = null;
-        let liveCountdownInterval = null;
+        // Single interval tracker for our new high-speed loop
+        let precisionTimerInterval = null;
 
         function selectTeam(name, hex, pass, drivers, suffix, logoFile) {
             if(activeDriverFile) return; 
@@ -221,40 +243,49 @@
                             </div>
                             <h3 class="driver-name">${driver.d}</h3>
                         </div>
-                        <button class="driver-check-btn" id="check-${driver.f}" onclick="performDriverCheck('${driver.f}', '${driver.d}')">Radio Check ${driver.d}</button>
+                        <button class="driver-check-btn" id="check-${driver.f}" onclick="performDriverCheck('${driver.f}', '${driver.d}')">> SYS.CHECK: ${driver.d}</button>
                     </div>`;
             });
+        }
+
+        // --- NEW HIGH-SPEED MILLISECOND TIMER ---
+        function startPrecisionCountdown(durationMs, buttonEl) {
+            const liveBanner = document.getElementById('live-banner');
+            const countdownEl = document.getElementById('live-countdown');
+            const endTime = Date.now() + durationMs;
+            
+            liveBanner.style.display = 'flex'; // Use flex for new module layout
+
+            clearInterval(precisionTimerInterval);
+            precisionTimerInterval = setInterval(() => {
+                const now = Date.now();
+                const remaining = Math.max(0, endTime - now);
+                
+                // Format to exactly 3 decimal places (e.g., "11.984")
+                const formattedTime = (remaining / 1000).toFixed(3).padStart(6, '0');
+                
+                countdownEl.innerText = formattedTime;
+                if(buttonEl) buttonEl.innerText = `> TX: ${formattedTime}s`;
+
+                if (remaining <= 0) {
+                    clearInterval(precisionTimerInterval);
+                }
+            }, 30); // Runs ~33 times per second for smooth LCD update
         }
 
         function performDriverCheck(fileId, displayName) {
             if (lineIsBusy) { alert("Wait a second, the line is busy with another team!"); return; }
             if (!localMicStream) { alert("⚠️ Microphone not connected!"); return; }
-        
+
             const btn = document.getElementById(`check-${fileId}`);
-            const originalText = `Radio Check ${displayName}`;
+            const originalText = `> SYS.CHECK: ${displayName}`;
             
-            // Grab the banner elements
-            const liveBanner = document.getElementById('live-banner');
-            const countdownEl = document.getElementById('live-countdown');
-            let timeLeft = 5;
-            
-            // Show the banner and set initial time
-            liveBanner.style.display = 'block';
-            countdownEl.innerText = timeLeft;
-        
-            btn.innerText = `🎙️ TESTING (${timeLeft}s)...`;
             btn.classList.add('active-check');
             document.querySelectorAll('.driver-check-btn').forEach(b => b.style.pointerEvents = "none");
-        
-            clearInterval(testCountdownInterval);
-            testCountdownInterval = setInterval(() => {
-                timeLeft--;
-                if(timeLeft >= 0) {
-                    btn.innerText = `🎙️ TESTING (${timeLeft}s)...`;
-                    countdownEl.innerText = timeLeft; // Update the banner countdown too!
-                }
-            }, 1000);
-        
+
+            // Start 5-second precise countdown
+            startPrecisionCountdown(5000, btn);
+
             db.ref('radioState').set({
                 active: true, 
                 team: currentTeam, 
@@ -262,17 +293,15 @@
                 video: `${fileId}_${currentFileSuffix}.webm`, 
                 timestamp: Date.now()
             });
-        
+
             activeCall = peer.call('f1lads-hq-tower-8844', localMicStream);
-        
+
             setTimeout(() => {
-                clearInterval(testCountdownInterval);
+                clearInterval(precisionTimerInterval);
                 db.ref('radioState').update({ active: false });
                 if (activeCall) { activeCall.close(); activeCall = null; }
                 
-                // Hide the banner when the test finishes
-                liveBanner.style.display = 'none';
-                
+                document.getElementById('live-banner').style.display = 'none';
                 btn.innerText = originalText;
                 btn.classList.remove('active-check');
                 document.querySelectorAll('.driver-check-btn').forEach(b => b.style.pointerEvents = "auto");
@@ -282,28 +311,17 @@
         function toggleRadio(fileId, displayName) {
             if (activeDriverFile && activeDriverFile !== fileId) return; 
             const card = document.getElementById(`card-${fileId}`);
-            const liveBanner = document.getElementById('live-banner');
-            const countdownEl = document.getElementById('live-countdown');
             
             if (!activeDriverFile) {
-                if (lineIsBusy) { updateTelemetry("[ LINE BUSY - WAIT ]", "#ff4444"); return; }
+                if (lineIsBusy) { updateTelemetry("[ ERR: LINE BUSY - WAITING ]", "#ff4444"); return; }
                 if (raceState === "PRE-RACE" || currentLap < 3 || currentLap === lastTransmittedLap) return;
 
                 activeDriverFile = fileId;
                 card.classList.add('active');
                 lastTransmittedLap = currentLap; 
                 
-                // --- SHOW LIVE BANNER AND START 12s COUNTDOWN ---
-                let liveTimeLeft = 12;
-                countdownEl.innerText = liveTimeLeft;
-                liveBanner.style.display = 'block';
-                
-                clearInterval(liveCountdownInterval);
-                liveCountdownInterval = setInterval(() => {
-                    liveTimeLeft--;
-                    if(liveTimeLeft >= 0) countdownEl.innerText = liveTimeLeft;
-                }, 1000);
-                // ------------------------------------------------
+                // Start 12-second precise countdown
+                startPrecisionCountdown(12000, null);
                 
                 db.ref('radioState').set({
                     active: true, team: currentTeam, driver: displayName,
@@ -316,10 +334,9 @@
                     if(activeDriverFile) toggleRadio(activeDriverFile, displayName); 
                 }, 12000);
             } else {
-                // --- HIDE BANNER AND CLEAN UP TIMERS ---
                 clearTimeout(safetyTimer);
-                clearInterval(liveCountdownInterval);
-                liveBanner.style.display = 'none';
+                clearInterval(precisionTimerInterval);
+                document.getElementById('live-banner').style.display = 'none';
                 
                 activeDriverFile = null;
                 card.classList.remove('active');
@@ -331,26 +348,26 @@
 
         function updateTelemetry(text, color = "#888") {
             const tel = document.getElementById('telemetry');
-            tel.innerText = text; tel.style.color = color; tel.style.borderColor = color === "#888" ? "#222" : color;
+            tel.innerText = text; tel.style.color = color; tel.style.borderColor = color === "#888" ? "#333" : color;
         }
 
         function evaluateTelemetryState() {
             const checkBtns = document.querySelectorAll('.driver-check-btn');
             const cards = document.querySelectorAll('.driver-card');
             if (raceState === "PRE-RACE") {
-                updateTelemetry("[ PRE-RACE : RADIO CHECK OPEN ]", "#00D7B6");
+                updateTelemetry("[ SYS.READY : TX OPEN ]", "#00D7B6");
                 checkBtns.forEach(btn => btn.style.display = "block");
                 cards.forEach(c => c.classList.add('disabled')); 
             } else {
                 checkBtns.forEach(btn => btn.style.display = "none");
                 if (currentLap < 3) {
-                    updateTelemetry(`[ LOCKED UNTIL LAP 3 (L${currentLap}) ]`, "#ff4444");
+                    updateTelemetry(`[ LOCKED : DELTA L${currentLap} ]`, "#ff4444");
                     cards.forEach(c => c.classList.add('disabled'));
                 } else if (currentLap === lastTransmittedLap) {
-                    updateTelemetry(`[ LAP ${currentLap} COMMS USED ]`, "#F47600");
+                    updateTelemetry(`[ L${currentLap} : BANDWIDTH EXHAUSTED ]`, "#F47600");
                     cards.forEach(c => c.classList.add('disabled'));
                 } else {
-                    updateTelemetry(`[ LAP ${currentLap} COMMS READY ]`, "#00D7B6");
+                    updateTelemetry(`[ L${currentLap} : READY TO TRANSMIT ]`, "#00D7B6");
                     cards.forEach(c => c.classList.remove('disabled'));
                 }
             }
@@ -360,7 +377,7 @@
             const radio = snapshot.val();
             if (radio && radio.active && radio.team !== currentTeam) {
                 lineIsBusy = true;
-                updateTelemetry(`[ LINE BUSY: ${radio.team.toUpperCase()} ]`, "#ff4444");
+                updateTelemetry(`[ OVERRIDE : ${radio.team.toUpperCase()} TX LIVE ]`, "#ff4444");
                 document.querySelectorAll('.driver-card').forEach(c => c.classList.add('disabled'));
             } else if (radio && !radio.active) {
                 lineIsBusy = false;
