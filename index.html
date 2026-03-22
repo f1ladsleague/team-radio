@@ -41,11 +41,10 @@
         .login-btn:hover { filter: brightness(1.2); }
 
         #driver-section { display: none; text-align: center; }
-        #radio-check-btn { display: none; background: #555; color: white; border: 2px solid #777; padding: 12px 25px; border-radius: 6px; font-weight: 900; font-size: 14px; text-transform: uppercase; cursor: pointer; margin: 0 auto 25px auto; transition: 0.3s; width: 100%; max-width: 300px; }
-        #radio-check-btn.active { background: #e10600; border-color: #ff4444; box-shadow: 0 0 15px rgba(225, 6, 0, 0.5); }
 
         .driver-grid { display: flex; justify-content: center; gap: 30px; }
-        .driver-card { background: #0a0a0f; border: 2px solid #222; border-radius: 8px; overflow: hidden; width: 220px; cursor: pointer; transition: 0.3s; position: relative; }
+        .driver-wrap { display: flex; flex-direction: column; gap: 10px; align-items: center; width: 220px; }
+        .driver-card { background: #0a0a0f; border: 2px solid #222; border-radius: 8px; overflow: hidden; width: 100%; cursor: pointer; transition: 0.3s; position: relative; }
         .driver-card.disabled { opacity: 0.4; filter: grayscale(100%); cursor: not-allowed; pointer-events: none; }
         .driver-card:hover:not(.disabled) { transform: translateY(-5px); border-color: #555; }
         
@@ -58,29 +57,22 @@
         .live-led { position: absolute; top: 15px; right: 15px; width: 15px; height: 15px; background: red; border-radius: 50%; box-shadow: 0 0 10px red; display: none; z-index: 10; }
         .driver-card.active .live-led { display: block; animation: pulse 1s infinite; }
 
+        .driver-check-btn { display: none; background: #555; color: white; border: 2px solid #777; padding: 10px 15px; border-radius: 6px; font-weight: 900; font-size: 13px; text-transform: uppercase; cursor: pointer; width: 100%; transition: 0.3s; }
+        .driver-check-btn:hover { background: #666; border-color: #888; }
+        .driver-check-btn.active-check { background: #e10600; border-color: #ff4444; box-shadow: 0 0 15px rgba(225, 6, 0, 0.5); }
+
         @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1); } }
 
         @media (max-width: 768px) {
-            /* Stack teams vertically, one per row */
-            .team-grid { 
-                flex-direction: column; 
-                gap: 12px; 
-            }
-            
-            /* Full width, but box-sizing keeps the padding inside so it doesn't spill over */
-            .team-btn { 
-                width: 100%; 
-                padding: 18px; 
-                box-sizing: border-box; 
-            }
-
-            /* Auth and Driver layout fixes */
+            .dash-header { flex-direction: column; gap: 15px; }
+            .telemetry-status { white-space: normal; word-wrap: break-word; width: 100%; box-sizing: border-box; font-size: 14px; }
+            .team-grid { flex-direction: column; gap: 12px; }
+            .team-btn { width: 100%; padding: 18px; box-sizing: border-box; }
             .auth-controls { flex-direction: column; width: 100%; }
             input[type="password"] { width: 100%; box-sizing: border-box; }
             .login-btn { width: 100%; margin-left: 0; box-sizing: border-box; }
-            
             .driver-grid { flex-direction: column; align-items: center; gap: 20px; }
-            .driver-card { width: 100%; max-width: 280px; box-sizing: border-box; }
+            .driver-wrap { width: 100%; max-width: 280px; box-sizing: border-box; }
         }
     </style>
 </head>
@@ -123,7 +115,6 @@
         </div>
 
         <div id="driver-section">
-            <button id="radio-check-btn" onclick="performRadioCheck()">Perform Radio Check</button>
             <div class="driver-grid" id="driver-container"></div>
         </div>
     </div>
@@ -183,14 +174,48 @@
             container.innerHTML = '';
             currentDrivers.forEach(driver => {
                 container.innerHTML += `
-                    <div class="driver-card" id="card-${driver.f}" onclick="toggleRadio('${driver.f}', '${driver.d}')">
-                        <div class="live-led"></div>
-                        <div class="driver-photo-wrap">
-                            <img src="https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/${driver.f}.png" class="driver-photo">
+                    <div class="driver-wrap">
+                        <div class="driver-card" id="card-${driver.f}" onclick="toggleRadio('${driver.f}', '${driver.d}')">
+                            <div class="live-led"></div>
+                            <div class="driver-photo-wrap">
+                                <img src="https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/${driver.f}.png" class="driver-photo">
+                            </div>
+                            <h3 class="driver-name">${driver.d}</h3>
                         </div>
-                        <h3 class="driver-name">${driver.d}</h3>
+                        <button class="driver-check-btn" id="check-${driver.f}" onclick="performDriverCheck('${driver.f}', '${driver.d}')">Test ${driver.d}</button>
                     </div>`;
             });
+        }
+
+        function performDriverCheck(fileId, displayName) {
+            if (lineIsBusy) { alert("Wait a second, the line is busy with another team!"); return; }
+            if (!localMicStream) { alert("⚠️ Microphone not connected!"); return; }
+
+            const btn = document.getElementById(`check-${fileId}`);
+            const originalText = btn.innerText;
+            
+            btn.innerText = "🎙️ TESTING (5s)...";
+            btn.classList.add('active-check');
+            document.querySelectorAll('.driver-check-btn').forEach(b => b.style.pointerEvents = "none");
+
+            db.ref('radioState').set({
+                active: true, 
+                team: currentTeam, 
+                driver: displayName + " (TEST)",
+                video: `${fileId}_${currentFileSuffix}.webm`, 
+                timestamp: Date.now()
+            });
+
+            activeCall = peer.call('f1lads-hq-tower-8844', localMicStream);
+
+            setTimeout(() => {
+                db.ref('radioState').update({ active: false });
+                if (activeCall) { activeCall.close(); activeCall = null; }
+                
+                btn.innerText = originalText;
+                btn.classList.remove('active-check');
+                document.querySelectorAll('.driver-check-btn').forEach(b => b.style.pointerEvents = "auto");
+            }, 5000);
         }
 
         function toggleRadio(fileId, displayName) {
@@ -228,14 +253,14 @@
         }
 
         function evaluateTelemetryState() {
-            const checkBtn = document.getElementById('radio-check-btn');
+            const checkBtns = document.querySelectorAll('.driver-check-btn');
             const cards = document.querySelectorAll('.driver-card');
             if (raceState === "PRE-RACE") {
                 updateTelemetry("[ PRE-RACE : RADIO CHECK OPEN ]", "#00D7B6");
-                if(checkBtn) { checkBtn.style.display = "block"; checkBtn.classList.add("active"); }
+                checkBtns.forEach(btn => btn.style.display = "block");
                 cards.forEach(c => c.classList.add('disabled')); 
             } else {
-                if(checkBtn) checkBtn.style.display = "none";
+                checkBtns.forEach(btn => btn.style.display = "none");
                 if (currentLap < 3) {
                     updateTelemetry(`[ LOCKED UNTIL LAP 3 (L${currentLap}) ]`, "#ff4444");
                     cards.forEach(c => c.classList.add('disabled'));
