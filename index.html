@@ -42,6 +42,36 @@
 
         #driver-section { display: none; text-align: center; }
 
+        /* --- NEW LIVE BANNER CSS --- */
+        #live-banner {
+            display: none;
+            background: #e10600;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 22px;
+            font-weight: 900;
+            text-transform: uppercase;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            box-shadow: 0 0 20px rgba(225, 6, 0, 0.4);
+            border: 2px solid #ff4444;
+            letter-spacing: 1px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .blinking-dot {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background-color: white;
+            border-radius: 50%;
+            margin-right: 10px;
+            vertical-align: middle;
+            animation: pulse 1s infinite;
+        }
+        /* --------------------------- */
+
         .driver-grid { display: flex; justify-content: center; gap: 30px; }
         .driver-wrap { display: flex; flex-direction: column; gap: 10px; align-items: center; width: 220px; }
         .driver-card { background: #0a0a0f; border: 2px solid #222; border-radius: 8px; overflow: hidden; width: 100%; cursor: pointer; transition: 0.3s; position: relative; }
@@ -73,6 +103,7 @@
             .login-btn { width: 100%; margin-left: 0; box-sizing: border-box; }
             .driver-grid { flex-direction: column; align-items: center; gap: 20px; }
             .driver-wrap { width: 100%; max-width: 280px; box-sizing: border-box; }
+            #live-banner { font-size: 16px; } /* Slightly smaller banner text on mobile */
         }
     </style>
 </head>
@@ -115,6 +146,10 @@
         </div>
 
         <div id="driver-section">
+            <div id="live-banner">
+                <span class="blinking-dot"></span> LIVE TRANSMISSION - <span id="live-countdown">12</span>s
+            </div>
+            
             <div class="driver-grid" id="driver-container"></div>
         </div>
     </div>
@@ -139,6 +174,10 @@
 
         let currentTeam = null, currentHex = null, currentPass = null, currentDrivers = [], currentFileSuffix = null, currentLogo = null;
         let activeDriverFile = null, safetyTimer = null, raceState = "PRE-RACE", currentLap = 0, lastTransmittedLap = -1;
+        
+        // New variables to track our interval timers
+        let testCountdownInterval = null;
+        let liveCountdownInterval = null;
 
         function selectTeam(name, hex, pass, drivers, suffix, logoFile) {
             if(activeDriverFile) return; 
@@ -192,11 +231,22 @@
             if (!localMicStream) { alert("⚠️ Microphone not connected!"); return; }
 
             const btn = document.getElementById(`check-${fileId}`);
-            const originalText = btn.innerText;
+            const originalText = `Radio Check ${displayName}`;
+            let timeLeft = 5;
             
-            btn.innerText = "🎙️ TESTING (5s)...";
+            // Set initial state
+            btn.innerText = `🎙️ TESTING (${timeLeft}s)...`;
             btn.classList.add('active-check');
             document.querySelectorAll('.driver-check-btn').forEach(b => b.style.pointerEvents = "none");
+
+            // Start the countdown interval
+            clearInterval(testCountdownInterval);
+            testCountdownInterval = setInterval(() => {
+                timeLeft--;
+                if(timeLeft > 0) {
+                    btn.innerText = `🎙️ TESTING (${timeLeft}s)...`;
+                }
+            }, 1000);
 
             db.ref('radioState').set({
                 active: true, 
@@ -209,6 +259,7 @@
             activeCall = peer.call('f1lads-hq-tower-8844', localMicStream);
 
             setTimeout(() => {
+                clearInterval(testCountdownInterval);
                 db.ref('radioState').update({ active: false });
                 if (activeCall) { activeCall.close(); activeCall = null; }
                 
@@ -221,6 +272,8 @@
         function toggleRadio(fileId, displayName) {
             if (activeDriverFile && activeDriverFile !== fileId) return; 
             const card = document.getElementById(`card-${fileId}`);
+            const liveBanner = document.getElementById('live-banner');
+            const countdownEl = document.getElementById('live-countdown');
             
             if (!activeDriverFile) {
                 if (lineIsBusy) { updateTelemetry("[ LINE BUSY - WAIT ]", "#ff4444"); return; }
@@ -230,15 +283,34 @@
                 card.classList.add('active');
                 lastTransmittedLap = currentLap; 
                 
+                // --- SHOW LIVE BANNER AND START 12s COUNTDOWN ---
+                let liveTimeLeft = 12;
+                countdownEl.innerText = liveTimeLeft;
+                liveBanner.style.display = 'block';
+                
+                clearInterval(liveCountdownInterval);
+                liveCountdownInterval = setInterval(() => {
+                    liveTimeLeft--;
+                    if(liveTimeLeft >= 0) countdownEl.innerText = liveTimeLeft;
+                }, 1000);
+                // ------------------------------------------------
+                
                 db.ref('radioState').set({
                     active: true, team: currentTeam, driver: displayName,
                     video: `${fileId}_${currentFileSuffix}.webm`, timestamp: Date.now()
                 });
 
                 if (localMicStream) { activeCall = peer.call('f1lads-hq-tower-8844', localMicStream); }
-                safetyTimer = setTimeout(() => { if(activeDriverFile) toggleRadio(activeDriverFile, displayName); }, 12000);
+                
+                safetyTimer = setTimeout(() => { 
+                    if(activeDriverFile) toggleRadio(activeDriverFile, displayName); 
+                }, 12000);
             } else {
+                // --- HIDE BANNER AND CLEAN UP TIMERS ---
                 clearTimeout(safetyTimer);
+                clearInterval(liveCountdownInterval);
+                liveBanner.style.display = 'none';
+                
                 activeDriverFile = null;
                 card.classList.remove('active');
                 db.ref('radioState').update({ active: false });
