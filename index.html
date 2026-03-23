@@ -408,7 +408,8 @@
                 card.classList.add('active');
                 lastTransmittedLap = currentLap; 
                 
-                startPrecisionCountdown(12000, null);
+                // Changed from 12000 to 6500 (1.5s connecting + 5.0s speaking)
+                startPrecisionCountdown(6500, null);
                 
                 db.ref('radioState').set({
                     active: true, team: currentTeam, driver: displayName,
@@ -417,9 +418,10 @@
 
                 dialTowers();
                 
+                // Changed from 12000 to 6500
                 safetyTimer = setTimeout(() => { 
                     if(activeDriverFile) toggleRadio(activeDriverFile, displayName); 
-                }, 12000);
+                }, 6500);
             } else {
                 clearTimeout(safetyTimer);
                 clearInterval(precisionTimerInterval);
