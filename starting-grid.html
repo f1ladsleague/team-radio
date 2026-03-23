@@ -135,6 +135,8 @@
             track.innerHTML = '';
             track.style.transform = `translateY(0)`;
 
+            console.log("RAW F1 TELEMETRY DATA:", liveGridData);
+
             let finalGrid = liveGridData.map(rawDriver => {
                 // Convert the incoming game name to ALL CAPS to match your test dictionary safely
                 let searchName = rawDriver.gameId.toUpperCase(); 
