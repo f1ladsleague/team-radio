@@ -138,10 +138,18 @@
             console.log("RAW F1 TELEMETRY DATA:", liveGridData);
 
             let finalGrid = liveGridData.map(rawDriver => {
-                // Convert the incoming game name to ALL CAPS to match your test dictionary safely
-                let searchName = rawDriver.gameId.toUpperCase(); 
-                
-                let profile = rosterDB[searchName] || { first: "Unknown", last: "DRIVER", team: "FIA", color: "#ffffff", photo: "Logo", logo: "Logo.png" };
+                let incomingName = rawDriver.gameId.toUpperCase();
+                let matchedProfile = null;
+
+                // Loop through our database and see if the incoming game name CONTAINS our key
+                for (let key in rosterDB) {
+                    if (incomingName.includes(key.toUpperCase())) {
+                        matchedProfile = rosterDB[key];
+                        break;
+                    }
+                }
+
+                let profile = matchedProfile || { first: "Unknown", last: "DRIVER", team: "FIA", color: "#ffffff", photo: "Logo", logo: "Logo.png" };
                 return { ...profile, pos: rawDriver.position };
             });
 
