@@ -49,6 +49,7 @@
             max-height: 100vh; overflow: hidden;
             background-color: var(--bg-base);
             opacity: 0; /* Starts hidden until triggered */
+            transition: opacity 0.5s ease;
         }
 
         /* =========================================
@@ -238,24 +239,7 @@
     <div class="broadcast-canvas" id="main-canvas">
         <div class="texture-dots"></div>
         <div class="texture-scanlines"></div>
-
-        <div id="scroller-track">
-            <div class="grid-section">
-                <div class="spine-center-wrapper" id="intro-spine-wrapper">
-                    <div class="spine-block-top">
-                        <div class="spine-segment"></div><div class="spine-segment"></div>
-                    </div>
-                    <div class="spine-block-bottom">
-                        <div class="spine-segment"></div><div class="spine-segment"></div>
-                    </div>
-                </div>
-                
-                <img src="https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/Logo.png" class="intro-logo" id="intro-logo" alt="Logo">
-                <div class="intro-title" id="intro-title">STARTING GRID</div>
-                <div class="intro-city" id="intro-city">Melbourne</div>
-            </div>
-
-            </div>
+        <div id="scroller-track"></div>
     </div>
 
     <script>
@@ -395,7 +379,10 @@
             apiKey: "AIzaSyCCiZwdBkZBZubr8oVsG8hkNE-x2iq3HJ0",
             authDomain: "f1-lads-team-radio-589fc.firebaseapp.com",
             databaseURL: "https://f1-lads-team-radio-589fc-default-rtdb.asia-southeast1.firebasedatabase.app/",
-            projectId: "f1-lads-team-radio-589fc"
+            projectId: "f1-lads-team-radio-589fc",
+            storageBucket: "f1-lads-team-radio-589fc.firebasestorage.app",
+            messagingSenderId: "449577983062",
+            appId: "1:449577983062:web:db65755d30d1c6a14ceff7"
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
