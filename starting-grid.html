@@ -9,229 +9,69 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
     <style>
-        /* =========================================
-           LOCAL FONT IMPORTS
-           ========================================= */
-        @font-face {
-            font-family: 'Formula1';
-            src: url('Formula1-Black.ttf') format('truetype');
-        }
-        @font-face {
-            font-family: 'Northwell';
-            src: url('Northwell.ttf') format('truetype');
-        }
-        @font-face {
-            font-family: 'KHInterference';
-            src: url('KHInterferenceTRIAL-Bold.otf') format('opentype');
-        }
+        @font-face { font-family: 'Formula1'; src: url('Formula1-Black.ttf') format('truetype'); }
+        @font-face { font-family: 'Northwell'; src: url('Northwell.ttf') format('truetype'); }
+        @font-face { font-family: 'KHInterference'; src: url('KHInterferenceTRIAL-Bold.otf') format('opentype'); }
 
         :root {
-            --bg-base: #060609;
-            --f1-red: #e10600;
-            --city-red: #FF2400;
-            --spine-yellow: #EDF864;
-            --font-main: 'Formula1', sans-serif;
-            --font-brush: 'Northwell', cursive;
-            --font-tech: 'KHInterference', sans-serif;
+            --bg-base: #060609; --f1-red: #e10600; --city-red: #FF2400; --spine-yellow: #EDF864;
+            --font-main: 'Formula1', sans-serif; --font-brush: 'Northwell', cursive; --font-tech: 'KHInterference', sans-serif;
         }
 
         * { box-sizing: border-box; }
         
-        body {
-            margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden;
-            background-color: transparent; 
-            color: #fff; font-family: var(--font-main);
-            display: flex; justify-content: center; align-items: center;
-        }
+        body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background-color: transparent; color: #fff; font-family: var(--font-main); display: flex; justify-content: center; align-items: center; }
 
-        .broadcast-canvas {
-            position: relative; width: 100%; height: 100%; aspect-ratio: 16 / 9;
-            max-height: 100vh; overflow: hidden;
-            background-color: var(--bg-base);
-            opacity: 0; /* Starts hidden until triggered */
-            transition: opacity 0.5s ease;
-        }
+        .broadcast-canvas { position: relative; width: 100%; height: 100%; aspect-ratio: 16 / 9; max-height: 100vh; overflow: hidden; background-color: var(--bg-base); opacity: 0; transition: opacity 0.5s ease; }
 
-        /* =========================================
-           GLOBAL TEXTURES
-           ========================================= */
-        .texture-dots {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.15;
-            background-image: radial-gradient(#ffffff 1px, transparent 1px); background-size: 20px 20px;
-        }
+        .texture-dots { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.15; background-image: radial-gradient(#ffffff 1px, transparent 1px); background-size: 20px 20px; }
+        .texture-scanlines { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.05; background: repeating-linear-gradient(45deg, transparent, transparent 10px, #ffffff 10px, #ffffff 20px); }
 
-        .texture-scanlines {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.05;
-            background: repeating-linear-gradient(45deg, transparent, transparent 10px, #ffffff 10px, #ffffff 20px);
-        }
+        #scroller-track { position: absolute; top: 0; left: 0; width: 100%; transition: transform 1.2s cubic-bezier(0.25, 1, 0.5, 1); display: flex; flex-direction: column; z-index: 5; }
+        .grid-section { width: 100%; height: 100vh; position: relative; flex-shrink: 0; overflow: hidden; }
 
-        /* =========================================
-           THE SCROLLER TRACK
-           ========================================= */
-        #scroller-track {
-            position: absolute; top: 0; left: 0; width: 100%;
-            transition: transform 1.2s cubic-bezier(0.25, 1, 0.5, 1);
-            display: flex; flex-direction: column; z-index: 5;
-        }
-
-        .grid-section {
-            width: 100%; height: 100vh; position: relative; flex-shrink: 0; overflow: hidden; 
-        }
-
-        /* =========================================
-           INTRO SEQUENCE ANIMATIONS & STYLING
-           ========================================= */
-        @keyframes zoomOutCenter {
-            0% { transform: translate(-50%, -50%) scale(4.6); opacity: 0; }
-            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-        }
-
-        @keyframes zoomOutSpine {
-            0% { transform: translateX(-50%) scale(4.6); opacity: 0; }
-            100% { transform: translateX(-50%) scale(1); opacity: 1; }
-        }
-
-        @keyframes cityRevealLeftToRight {
-            0% { clip-path: inset(0 100% 0 0); opacity: 0; }
-            40% { opacity: 1; }
-            100% { clip-path: inset(0 -20% 0 -20%); opacity: 1; } 
-        }
+        @keyframes zoomOutCenter { 0% { transform: translate(-50%, -50%) scale(4.6); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+        @keyframes zoomOutSpine { 0% { transform: translateX(-50%) scale(4.6); opacity: 0; } 100% { transform: translateX(-50%) scale(1); opacity: 1; } }
+        @keyframes cityRevealLeftToRight { 0% { clip-path: inset(0 100% 0 0); opacity: 0; } 40% { opacity: 1; } 100% { clip-path: inset(0 -20% 0 -20%); opacity: 1; } }
 
         .animate-zoom-center { animation: zoomOutCenter 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
         .animate-zoom-spine { animation: zoomOutSpine 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
         .animate-city-reveal { animation: cityRevealLeftToRight 1.2s 1s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 
-        .intro-logo {
-            position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%);
-            max-width: 306px; max-height: 204px; object-fit: contain;
-            filter: drop-shadow(0 0 15px rgba(255,255,255,0.1)); z-index: 10;
-        }
+        .intro-logo { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); max-width: 306px; max-height: 204px; object-fit: contain; filter: drop-shadow(0 0 15px rgba(255,255,255,0.1)); z-index: 10; }
+        .intro-title { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 133px; letter-spacing: 5px; margin: 0; white-space: nowrap; z-index: 10; }
+        .intro-city { position: absolute; left: 50%; top: 60%; transform: translate(-50%, -50%); font-family: var(--font-brush); font-size: 124px; color: var(--city-red); margin: 0; white-space: nowrap; text-shadow: 2px 2px 5px rgba(0,0,0,0.8); z-index: 11; }
 
-        .intro-title {
-            position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-            font-size: 133px; letter-spacing: 5px; margin: 0; white-space: nowrap; z-index: 10;
-        }
-
-        .intro-city {
-            position: absolute; left: 50%; top: 60%; transform: translate(-50%, -50%);
-            font-family: var(--font-brush); font-size: 124px; color: var(--city-red);
-            margin: 0; white-space: nowrap; text-shadow: 2px 2px 5px rgba(0,0,0,0.8); z-index: 11;
-        }
-
-        /* =========================================
-           THE RED SPINE STRUCTURE
-           ========================================= */
-        .spine-center-wrapper {
-            position: absolute; left: 50%; top: 0; bottom: 0; transform: translateX(-50%);
-            width: 69px; display: flex; flex-direction: column; align-items: center; z-index: 110;
-        }
-
-        .spine-block-top {
-            width: 100%; height: 420px; position: absolute; top: 0;
-            clip-path: polygon(0 0, 100% 0, 100% 100%, 0 calc(100% - 60px));
-            display: flex; justify-content: space-between;
-        }
-
-        .spine-block-bottom {
-            width: 100%; height: 450px; position: absolute; bottom: 0;
-            clip-path: polygon(0 0, 100% 60px, 100% 100%, 0 100%);
-            display: flex; justify-content: space-between;
-        }
-
-        .spine-segment {
-            width: 31px; height: 100%; background-color: var(--f1-red);
-            box-shadow: 0 0 10px rgba(225, 6, 0, 0.5);
-        }
-
+        .spine-center-wrapper { position: absolute; left: 50%; top: 0; bottom: 0; transform: translateX(-50%); width: 69px; display: flex; flex-direction: column; align-items: center; z-index: 110; }
+        .spine-block-top { width: 100%; height: 420px; position: absolute; top: 0; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 calc(100% - 60px)); display: flex; justify-content: space-between; }
+        .spine-block-bottom { width: 100%; height: 450px; position: absolute; bottom: 0; clip-path: polygon(0 0, 100% 60px, 100% 100%, 0 100%); display: flex; justify-content: space-between; }
+        .spine-segment { width: 31px; height: 100%; background-color: var(--f1-red); box-shadow: 0 0 10px rgba(225, 6, 0, 0.5); }
         .driver-spine-top { height: 380px; }
         .driver-spine-bottom { height: 365px; }
+        .spine-vertical-text { position: absolute; top: 50%; transform: translateY(-50%) rotate(180deg); writing-mode: vertical-rl; font-family: var(--font-tech); font-size: 40px; color: var(--spine-yellow); letter-spacing: 5px; white-space: nowrap; text-shadow: 0 0 15px rgba(237, 248, 100, 0.4); z-index: 50; }
 
-        .spine-vertical-text {
-            position: absolute; top: 50%; transform: translateY(-50%) rotate(180deg);
-            writing-mode: vertical-rl; font-family: var(--font-tech); font-size: 40px; 
-            color: var(--spine-yellow); letter-spacing: 5px;  
-            white-space: nowrap; text-shadow: 0 0 15px rgba(237, 248, 100, 0.4); z-index: 50;
-        }
-
-        /* =========================================
-           DRIVER CARDS
-           ========================================= */
-        .driver-half {
-            position: absolute; top: 0; width: 50%; height: 100%;
-        }
-        .left-side { left: 0; }
-        .right-side { right: 0; }
-
-        .team-glow {
-            position: absolute; bottom: 0; left: 0; width: 100%; height: 85%; z-index: 1;
-            background: linear-gradient(to top, var(--team-color) 0%, rgba(0,0,0,0) 100%);
-            opacity: 0.95; 
-        }
-
-        .bottom-fade {
-            position: absolute; bottom: 0; left: 0; width: 100%; height: 50%; z-index: 15;
-            background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.5) 50%, transparent 100%);
-            pointer-events: none;
-        }
-
-        .edge-sidebar {
-            position: absolute; top: 0; bottom: 0; width: 80px; background: #050508;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 40; gap: 40px;
-        }
-        .left-side .edge-sidebar { left: 0; border-right: 1px solid rgba(255,255,255,0.1); }
-        .right-side .edge-sidebar { right: 0; border-left: 1px solid rgba(255,255,255,0.1); }
-
-        .sidebar-team-name {
-            font-size: 27px; color: #fff; writing-mode: vertical-rl; 
-            letter-spacing: 4px; white-space: nowrap; transform: rotate(180deg); 
-        }
+        .driver-half { position: absolute; top: 0; width: 50%; height: 100%; }
+        .left-side { left: 0; } .right-side { right: 0; }
+        .team-glow { position: absolute; bottom: 0; left: 0; width: 100%; height: 85%; z-index: 1; background: linear-gradient(to top, var(--team-color) 0%, rgba(0,0,0,0) 100%); opacity: 0.95; }
+        .bottom-fade { position: absolute; bottom: 0; left: 0; width: 100%; height: 50%; z-index: 15; background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.5) 50%, transparent 100%); pointer-events: none; }
+        .edge-sidebar { position: absolute; top: 0; bottom: 0; width: 80px; background: #050508; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 40; gap: 40px; }
+        .left-side .edge-sidebar { left: 0; border-right: 1px solid rgba(255,255,255,0.1); } .right-side .edge-sidebar { right: 0; border-left: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-team-name { font-size: 27px; color: #fff; writing-mode: vertical-rl; letter-spacing: 4px; white-space: nowrap; transform: rotate(180deg); }
         .sidebar-logo { width: 50px; height: auto; object-fit: contain; }
+        .driver-photo { position: absolute; bottom: 0; top: 15px; height: 140%; object-fit: contain; z-index: 10; filter: drop-shadow(0 15px 25px rgba(0,0,0,0.8)); }
+        .left-side .driver-photo { left: calc(80px + (100% - 200px) / 2); transform: translateX(-50%); } .right-side .driver-photo { right: calc(80px + (100% - 200px) / 2); transform: translateX(50%); }
 
-        .driver-photo {
-            position: absolute; bottom: 0; top: 15px; height: 140%; object-fit: contain; z-index: 10;
-            filter: drop-shadow(0 15px 25px rgba(0,0,0,0.8));
-        }
-        .left-side .driver-photo { left: calc(80px + (100% - 200px) / 2); transform: translateX(-50%); }
-        .right-side .driver-photo { right: calc(80px + (100% - 200px) / 2); transform: translateX(50%); }
-
-        /* =========================================
-           POSITION NUMBERS & DSQ LOGIC
-           ========================================= */
-        .pos-number {
-            position: absolute; font-family: var(--font-tech); font-size: 250px; color: #fff; 
-            z-index: 30; text-shadow: 0 10px 20px rgba(0, 0, 0, 0.5); line-height: 1; display: flex; 
-        }
-        .left-side .pos-number { top: 580px; left: 900px; }
-        .right-side .pos-number { top: 690px; right: 900px; } 
-        
+        .pos-number { position: absolute; font-family: var(--font-tech); font-size: 250px; color: #fff; z-index: 30; text-shadow: 0 10px 20px rgba(0, 0, 0, 0.5); line-height: 1; display: flex; }
+        .left-side .pos-number { top: 580px; left: 900px; } .right-side .pos-number { top: 690px; right: 900px; } 
         .right-side .pos-number.pos-10 { right: 750px; }
-        
         .pos-number.pos-dsq { color: #ff0000; }
-        .left-side .pos-number.pos-dsq { left: 750px; }
-        .right-side .pos-number.pos-dsq { right: 754px; }
-        
+        .left-side .pos-number.pos-dsq { left: 750px; } .right-side .pos-number.pos-dsq { right: 754px; }
         .pos-suffix { font-size: 120px; margin-top: 40px; }
 
-        /* =========================================
-           NAME CONTAINERS
-           ========================================= */
-        .name-container {
-            position: absolute; bottom: 10%; z-index: 30; display: flex; flex-direction: column; align-items: center;
-        }
-        .left-side .name-container { left: calc(80px + (100% - 200px) / 2); transform: translateX(-50%); }
-        .right-side .name-container { right: calc(80px + (100% - 200px) / 2); transform: translateX(50%); }
-
-        .last-name {
-            font-family: var(--font-main); font-size: 110px; color: var(--team-color);
-            text-transform: uppercase; line-height: 0.8; z-index: 1; text-shadow: 0 5px 15px rgba(0,0,0,0.8);
-        }
-
-        .first-name {
-            font-family: var(--font-brush); font-size: 114px; color: #fff; text-transform: capitalize; 
-            line-height: 0.5; z-index: 2; text-shadow: 2px 2px 10px rgba(0,0,0,0.8); position: relative; left: -20px; top: 10px;
-        }
-
+        .name-container { position: absolute; bottom: 10%; z-index: 30; display: flex; flex-direction: column; align-items: center; }
+        .left-side .name-container { left: calc(80px + (100% - 200px) / 2); transform: translateX(-50%); } .right-side .name-container { right: calc(80px + (100% - 200px) / 2); transform: translateX(50%); }
+        .last-name { font-family: var(--font-main); font-size: 110px; color: var(--team-color); text-transform: uppercase; line-height: 0.8; z-index: 1; text-shadow: 0 5px 15px rgba(0,0,0,0.8); }
+        .first-name { font-family: var(--font-brush); font-size: 114px; color: #fff; text-transform: capitalize; line-height: 0.5; z-index: 2; text-shadow: 2px 2px 10px rgba(0,0,0,0.8); position: relative; left: -20px; top: 10px; }
     </style>
 </head>
 <body>
@@ -243,9 +83,6 @@
     </div>
 
     <script>
-        // ==========================================
-        // 1. UPDATED ROSTER DICTIONARY
-        // ==========================================
         const rosterDB = {
             "M. MAPA": { first: "Madhawa", last: "MAPA", team: "FERRARI", color: "#ED1131", photo: "Mapa", logo: "FER.png" },
             "shiyank88": { first: "Kekulkotawage", last: "SHIYAN", team: "FERRARI", color: "#ED1131", photo: "Shiyan", logo: "FER.png" },
@@ -271,14 +108,10 @@
 
         function generateDriverHTML(driver, side) {
             if (!driver) return `<div class="driver-half ${side}-side"></div>`; 
-            
             const isDSQ = driver.pos === "DSQ";
             const displayPos = isDSQ ? "DSQ" : driver.pos;
             const ordinal = isDSQ ? "" : `<span class="pos-suffix">${getOrdinal(driver.pos)}</span>`;
-            
-            let positionClass = "";
-            if (isDSQ) positionClass = " pos-dsq";
-            else if (driver.pos === 10) positionClass = " pos-10";
+            let positionClass = isDSQ ? " pos-dsq" : (driver.pos === 10 ? " pos-10" : "");
 
             return `
                 <div class="driver-half ${side}-side" style="--team-color: ${driver.color}">
@@ -288,9 +121,7 @@
                         <div class="sidebar-team-name">${driver.team}</div>
                         <img class="sidebar-logo" src="https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/${driver.logo}">
                     </div>
-                    <div class="pos-number${positionClass}">
-                        ${displayPos}${ordinal}
-                    </div>
+                    <div class="pos-number${positionClass}">${displayPos}${ordinal}</div>
                     <img class="driver-photo" src="https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/${driver.photo}.png" onerror="this.style.display='none'">
                     <div class="name-container">
                         <div class="first-name">${driver.first}</div>
@@ -300,8 +131,7 @@
             `;
         }
 
-        function buildAndPlayGrid(liveGridData) {
-            // Reset existing track
+        function buildAndPlayGrid(liveGridData, trackName) {
             track.innerHTML = '';
             track.style.transform = `translateY(0)`;
 
@@ -310,19 +140,32 @@
                 return { ...profile, pos: rawDriver.position };
             });
 
-            const totalRows = Math.ceil(finalGrid.length / 2);
+            // Fallback just in case trackName is empty
+            const displayCity = trackName ? trackName : "Qualifying Result";
+
+            const introDiv = document.createElement('div');
+            introDiv.className = 'grid-section';
+            introDiv.innerHTML = `
+                <div class="spine-center-wrapper animate-zoom-spine">
+                    <div class="spine-block-top"><div class="spine-segment"></div><div class="spine-segment"></div></div>
+                    <div class="spine-block-bottom"><div class="spine-segment"></div><div class="spine-segment"></div></div>
+                </div>
+                <img src="https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/Logo.png" class="intro-logo animate-zoom-center" alt="Logo">
+                <div class="intro-title animate-zoom-center">STARTING GRID</div>
+                <div class="intro-city animate-city-reveal">${displayCity}</div> 
+            `;
+            track.appendChild(introDiv);
+
+            // 2. THEN ADD THE DRIVER ROWS
+            const driverRows = Math.ceil(finalGrid.length / 2);
             for (let i = 0; i < finalGrid.length; i += 2) {
                 const section = document.createElement('div');
                 section.className = 'grid-section';
                 section.innerHTML = `
                     <div class="spine-center-wrapper">
-                        <div class="spine-block-top driver-spine-top">
-                            <div class="spine-segment"></div><div class="spine-segment"></div>
-                        </div>
+                        <div class="spine-block-top driver-spine-top"><div class="spine-segment"></div><div class="spine-segment"></div></div>
                         <div class="spine-vertical-text">STARTING GRID</div>
-                        <div class="spine-block-bottom driver-spine-bottom">
-                            <div class="spine-segment"></div><div class="spine-segment"></div>
-                        </div>
+                        <div class="spine-block-bottom driver-spine-bottom"><div class="spine-segment"></div><div class="spine-segment"></div></div>
                     </div>
                     ${generateDriverHTML(finalGrid[i], 'left')}
                     ${generateDriverHTML(finalGrid[i+1], 'right')}
@@ -330,41 +173,18 @@
                 track.appendChild(section);
             }
 
-            // Reveal Canvas & Trigger Intro Animations
+            // Reveal Canvas
             mainCanvas.style.opacity = '1';
             
-            // We append the intro graphic dynamically so the animation replays on fresh triggers
-            const introDiv = document.createElement('div');
-            introDiv.className = 'grid-section';
-            introDiv.style.position = 'absolute';
-            introDiv.style.top = '0';
-            introDiv.style.zIndex = '100';
-            introDiv.innerHTML = `
-                <div class="spine-center-wrapper animate-zoom-spine" id="intro-spine-wrapper">
-                    <div class="spine-block-top">
-                        <div class="spine-segment"></div><div class="spine-segment"></div>
-                    </div>
-                    <div class="spine-block-bottom">
-                        <div class="spine-segment"></div><div class="spine-segment"></div>
-                    </div>
-                </div>
-                <img src="https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/Logo.png" class="intro-logo animate-zoom-center" alt="Logo">
-                <div class="intro-title animate-zoom-center">STARTING GRID</div>
-                <div class="intro-city animate-city-reveal">Qualifying Result</div>
-            `;
-            track.appendChild(introDiv);
-
-            // Scroll Sequence
+            // Scroll Sequence (Starts at 0, scrolls through driverRows)
             setTimeout(() => {
-                introDiv.style.opacity = '0'; // Hide intro after start
                 let currentRowIndex = 0;
                 function scrollNext() {
-                    if (currentRowIndex < totalRows - 1) { // -1 to account for intro
+                    if (currentRowIndex < driverRows) {
                         currentRowIndex++;
                         track.style.transform = `translateY(-${currentRowIndex * 100}vh)`;
                         setTimeout(scrollNext, 5000); 
                     } else {
-                        // Fade out at the very end
                         setTimeout(() => { mainCanvas.style.opacity = '0'; }, 6000);
                     }
                 }
@@ -379,17 +199,21 @@
             apiKey: "AIzaSyCCiZwdBkZBZubr8oVsG8hkNE-x2iq3HJ0",
             authDomain: "f1-lads-team-radio-589fc.firebaseapp.com",
             databaseURL: "https://f1-lads-team-radio-589fc-default-rtdb.asia-southeast1.firebasedatabase.app/",
-            projectId: "f1-lads-team-radio-589fc",
-            storageBucket: "f1-lads-team-radio-589fc.firebasestorage.app",
-            messagingSenderId: "449577983062",
-            appId: "1:449577983062:web:db65755d30d1c6a14ceff7"
+            projectId: "f1-lads-team-radio-589fc"
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-
         let lastTriggerTime = 0;
 
-        // 1. Listen for the "Session Ended" Trigger
+        db.ref('startingGrid').on('value', (snapshot) => {
+            const gridInfo = snapshot.val();
+            if (gridInfo && gridInfo.trigger && gridInfo.timestamp > lastTriggerTime) {
+                lastTriggerTime = gridInfo.timestamp;
+                // Pass BOTH the data and the trackName to the builder
+                buildAndPlayGrid(gridInfo.data, gridInfo.trackName);
+            }
+        });
+
         db.ref('startingGrid').on('value', (snapshot) => {
             const gridInfo = snapshot.val();
             if (gridInfo && gridInfo.trigger && gridInfo.timestamp > lastTriggerTime) {
@@ -398,7 +222,6 @@
             }
         });
 
-        // 2. Hide graphic immediately if lobby returns to pre-race menu
         db.ref('telemetryState').on('value', (snapshot) => {
             const stateInfo = snapshot.val();
             if (stateInfo && stateInfo.state === "PRE-RACE") {
@@ -406,6 +229,21 @@
                 track.style.transform = `translateY(0)`;
             }
         });
+
+        // ==========================================
+        // TEST MODE: AUTO-PLAY AFTER 2 SECONDS
+        // Delete this window.onload block before race day!
+        // ==========================================
+        window.onload = () => {
+            const testTelemetry = [
+                { gameId: "NuwiRODDA", position: 1 }, { gameId: "Racer4965", position: 2 },
+                { gameId: "M. MAPA", position: 3 }, { gameId: "Laforet", position: 4 },
+                { gameId: "Nuwie_G", position: 5 }, { gameId: "PrODigY__v2", position: 6 },
+                { gameId: "BiGDaddyE3002", position: 7 }, { gameId: "shiyank88", position: 8 },
+                { gameId: "S. Malimbada", position: 9 }, { gameId: "ShahanW", position: 10 }
+            ];
+            setTimeout(() => { buildAndPlayGrid(testTelemetry, "Monza"); }, 2000);
+        };
     </script>
 </body>
 </html>
