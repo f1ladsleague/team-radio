@@ -84,16 +84,16 @@
 
     <script>
         const rosterDB = {
-            "M. MAPA": { first: "Madhawa", last: "MAPA", team: "FERRARI", color: "#ED1131", photo: "Mapa", logo: "FER.png" },
-            "shiyank88": { first: "Kekulkotawage", last: "SHIYAN", team: "FERRARI", color: "#ED1131", photo: "Shiyan", logo: "FER.png" },
-            "NuwiRODDA": { first: "Nuwi", last: "RODDA", team: "MERCEDES", color: "#00D7B6", photo: "Rodda", logo: "MER.png" },
-            "PrODigY__v2": { first: "Keragala", last: "KALPA", team: "MERCEDES", color: "#00D7B6", photo: "Kalpa", logo: "MER.png" },
-            "Laforet": { first: "Wimalagunaratna", last: "SAHAN", team: "MCLAREN", color: "#F47600", photo: "Sahan", logo: "MCL.png" },
-            "S. Malimbada": { first: "Malimbada", last: "SAMEERA", team: "MCLAREN", color: "#F47600", photo: "Sameera", logo: "MCL.png" },
-            "Nuwie_G": { first: "Gamage", last: "NUWIE G", team: "ASTON MARTIN", color: "#229971", photo: "NuwieG", logo: "AM.png" },
-            "ShahanW": { first: "Withanage", last: "SHAHAN", team: "ASTON MARTIN", color: "#229971", photo: "Shahan", logo: "AM.png" },
+            "LECLERC": { first: "Madhawa", last: "MAPA", team: "FERRARI", color: "#ED1131", photo: "Mapa", logo: "FER.png" },
+            "HAMILTON": { first: "Kekulkotawage", last: "SHIYAN", team: "FERRARI", color: "#ED1131", photo: "Shiyan", logo: "FER.png" },
+            "RUSSELL": { first: "Nuwi", last: "RODDA", team: "MERCEDES", color: "#00D7B6", photo: "Rodda", logo: "MER.png" },
+            "ANTONELLI": { first: "Keragala", last: "KALPA", team: "MERCEDES", color: "#00D7B6", photo: "Kalpa", logo: "MER.png" },
+            "NORRIS": { first: "Wimalagunaratna", last: "SAHAN", team: "MCLAREN", color: "#F47600", photo: "Sahan", logo: "MCL.png" },
+            "PIASTRI": { first: "Malimbada", last: "SAMEERA", team: "MCLAREN", color: "#F47600", photo: "Sameera", logo: "MCL.png" },
+            "ALONSO": { first: "Gamage", last: "NUWIE G", team: "ASTON MARTIN", color: "#229971", photo: "NuwieG", logo: "AM.png" },
+            "STROLL": { first: "Withanage", last: "SHAHAN", team: "ASTON MARTIN", color: "#229971", photo: "Shahan", logo: "AM.png" },
             "Racer4965": { first: "Ekanayake", last: "NIPPA", team: "RED BULL", color: "#4781D7", photo: "NippaE", logo: "RB.png" },
-            "BiGDaddyE3002": { first: "Pelpola", last: "ERANGA", team: "RED BULL", color: "#4781D7", photo: "Eranga", logo: "RB.png" }
+            "VERSTAPPEN": { first: "Pelpola", last: "ERANGA", team: "RED BULL", color: "#4781D7", photo: "Eranga", logo: "RB.png" }
         };
 
         function getOrdinal(n) {
@@ -136,7 +136,10 @@
             track.style.transform = `translateY(0)`;
 
             let finalGrid = liveGridData.map(rawDriver => {
-                let profile = rosterDB[rawDriver.gameId] || { first: "Unknown", last: "DRIVER", team: "FIA", color: "#ffffff", photo: "Logo", logo: "Logo.png" };
+                // Convert the incoming game name to ALL CAPS to match your test dictionary safely
+                let searchName = rawDriver.gameId.toUpperCase(); 
+                
+                let profile = rosterDB[searchName] || { first: "Unknown", last: "DRIVER", team: "FIA", color: "#ffffff", photo: "Logo", logo: "Logo.png" };
                 return { ...profile, pos: rawDriver.position };
             });
 
@@ -234,16 +237,16 @@
         // TEST MODE: AUTO-PLAY AFTER 2 SECONDS
         // Delete this window.onload block before race day!
         // ==========================================
-        window.onload = () => {
-            const testTelemetry = [
-                { gameId: "NuwiRODDA", position: 1 }, { gameId: "Racer4965", position: 2 },
-                { gameId: "M. MAPA", position: 3 }, { gameId: "Laforet", position: 4 },
-                { gameId: "Nuwie_G", position: 5 }, { gameId: "PrODigY__v2", position: 6 },
-                { gameId: "BiGDaddyE3002", position: 7 }, { gameId: "shiyank88", position: 8 },
-                { gameId: "S. Malimbada", position: 9 }, { gameId: "ShahanW", position: 10 }
-            ];
-            setTimeout(() => { buildAndPlayGrid(testTelemetry, "Monza"); }, 2000);
-        };
+        //window.onload = () => {
+            //const testTelemetry = [
+                //{ gameId: "NuwiRODDA", position: 1 }, { gameId: "Racer4965", position: 2 },
+                //{ gameId: "M. MAPA", position: 3 }, { gameId: "Laforet", position: 4 },
+                //{ gameId: "Nuwie_G", position: 5 }, { gameId: "PrODigY__v2", position: 6 },
+                //{ gameId: "BiGDaddyE3002", position: 7 }, { gameId: "shiyank88", position: 8 },
+                //{ gameId: "S. Malimbada", position: 9 }, { gameId: "ShahanW", position: 10 }
+            //];
+            //setTimeout(() => { buildAndPlayGrid(testTelemetry, "Monza"); }, 2000);
+        //};
     </script>
 </body>
 </html>
