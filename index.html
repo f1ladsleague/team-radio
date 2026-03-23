@@ -18,7 +18,8 @@
         body { font-family: 'Titillium Web', sans-serif; background: var(--f1-dark); color: white; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
         
         .brand-header { margin-bottom: 25px; margin-top: 10px; }
-        .brand-logo { height: 75px; object-fit: contain; }
+        .brand-logo { height: 75px; object-fit: contain; transition: 0.2s; }
+        .brand-logo:hover { filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.2)); transform: scale(1.02); }
 
         .dashboard { width: 100%; max-width: 900px; background: var(--f1-card); padding: 30px; border-radius: 8px; border: 1px solid var(--f1-border); border-top: 4px solid var(--theme-color); box-shadow: 0 10px 40px rgba(0,0,0,0.9); transition: all 0.4s ease; box-sizing: border-box; position: relative; }
         .dashboard::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.01) 2px, rgba(255,255,255,0.01) 4px); pointer-events: none; border-radius: 8px; }
@@ -68,7 +69,8 @@
         #live-countdown { font-size: 32px; color: #fff; text-shadow: 0 0 10px rgba(255, 255, 255, 0.5); }
         .ms-unit { font-size: 16px; color: #aaa; margin-left: 2px; }
 
-        .blinking-dot { width: 14px; height: 14px; background-color: #ff0000; border-radius: 50%; box-shadow: 0 0 10px #ff0000; animation: flash 0.8s infinite alternate; }
+        .blinking-dot { width: 14px; height: 14px; background-color: #ff0000; border-radius: 50%; box-shadow: 0 0 10px #ff0000; animation: flash 0.8s infinite alternate; transition: 0.2s; }
+        .orange-dot { background-color: #F47600 !important; box-shadow: 0 0 10px #F47600 !important; animation: none !important; }
         @keyframes flash { from { opacity: 1; box-shadow: 0 0 15px #ff0000; } to { opacity: 0.2; box-shadow: 0 0 2px #ff0000; } }
 
         .driver-grid { display: flex; justify-content: center; gap: 30px; }
@@ -137,7 +139,9 @@
 <body>
 
     <div class="brand-header">
-        <img class="brand-logo" src="https://raw.githubusercontent.com/f1ladsleague/sidebetting/9e649c454badbe13d3d17c100f0f535a7555a058/Logo.png" alt="F1 Lads Logo">
+        <a href="https://f1lads.com" target="_blank">
+            <img class="brand-logo" src="https://raw.githubusercontent.com/f1ladsleague/sidebetting/9e649c454badbe13d3d17c100f0f535a7555a058/Logo.png" alt="F1 Lads Logo">
+        </a>
     </div>
 
     <div class="dashboard" id="main-dash">
@@ -175,15 +179,15 @@
         <div id="driver-section">
             <div id="live-banner">
                 <div class="banner-left">
-                    <div class="blinking-dot"></div>
+                    <div class="blinking-dot" id="comms-led"></div>
                     <div>
                         <span class="data-label">COMMS STATUS</span>
-                        <span class="data-value">TX LIVE</span>
+                        <span class="data-value" id="comms-status-text">TX LIVE</span>
                     </div>
                 </div>
                 <div class="banner-right">
                     <span class="data-label">T-MINUS (WINDOW)</span>
-                    <span id="live-countdown">00.000</span><span class="ms-unit">s</span>
+                    <span id="live-countdown">00.000</span><span class="ms-unit" id="ms-label">s</span>
                 </div>
             </div>
             
@@ -192,7 +196,7 @@
     </div>
 
     <script>
-            const firebaseConfig = {
+        const firebaseConfig = {
             apiKey: "AIzaSyCCiZwdBkZBZubr8oVsG8hkNE-x2iq3HJ0",
             authDomain: "f1-lads-team-radio-589fc.firebaseapp.com",
             databaseURL: "https://f1-lads-team-radio-589fc-default-rtdb.asia-southeast1.firebasedatabase.app/",
@@ -204,7 +208,7 @@
 
         const peer = new Peer(); 
         let localMicStream = null;
-        let activeCalls = []; // Now an array to handle multiple receivers
+        let activeCalls = []; 
         let lineIsBusy = false;
 
         let currentTeam = null, currentHex = null, currentPass = null, currentDrivers = [], currentFileSuffix = null, currentLogo = null;
@@ -212,7 +216,6 @@
         
         let precisionTimerInterval = null;
 
-        // The two separate devices we will broadcast to
         const TARGET_TOWERS = ['f1lads-tower-obs', 'f1lads-tower-discord'];
 
         function selectTeam(name, hex, pass, drivers, suffix, logoFile) {
@@ -265,6 +268,9 @@
         function startPrecisionCountdown(totalDurationMs, buttonEl) {
             const liveBanner = document.getElementById('live-banner');
             const countdownEl = document.getElementById('live-countdown');
+            const msLabelEl = document.getElementById('ms-label');
+            const statusTextEl = document.getElementById('comms-status-text');
+            const ledEl = document.getElementById('comms-led');
             
             const now = Date.now();
             const introDurationMs = 1500; 
@@ -280,14 +286,27 @@
                 const currentTime = Date.now();
                 
                 if (currentTime < introEndTime) {
-                    const remainingIntro = ((introEndTime - currentTime) / 1000).toFixed(1);
-                    countdownEl.innerText = `CONNECTING: ${remainingIntro}s`;
-                    countdownEl.style.color = "#F47600"; 
+                    // PHASE 1: CONNECTING / WAITING (0 to 1.5s)
+                    const remainingIntro = Math.max(0, introEndTime - currentTime);
+                    const formattedIntro = (remainingIntro / 1000).toFixed(3).padStart(6, '0');
+                    
+                    // Left Status: Orange, Solid LED, "CONNECTING..."
+                    statusTextEl.innerText = "CONNECTING...";
+                    statusTextEl.style.color = "#F47600";
+                    statusTextEl.style.textShadow = "0 0 8px rgba(244, 118, 0, 0.6)";
+                    ledEl.classList.add('orange-dot');
+
+                    // Right Timer: Raw Milliseconds (Orange)
+                    countdownEl.innerText = formattedIntro;
+                    countdownEl.style.color = "#F47600";
+                    msLabelEl.style.color = "#F47600";
+
                     if(buttonEl) {
-                        buttonEl.innerText = `CONNECTING: ${remainingIntro}s`;
+                        buttonEl.innerText = `CONNECTING: ${formattedIntro}s`;
                         buttonEl.style.color = "#F47600";
                     }
                 } else {
+                    // PHASE 2: LIVE BROADCAST (1.5s to End)
                     if(localMicStream && !localMicStream.getAudioTracks()[0].enabled) {
                         localMicStream.getAudioTracks()[0].enabled = true; 
                     }
@@ -295,8 +314,17 @@
                     const remainingLive = Math.max(0, totalEndTime - currentTime);
                     const formattedTime = (remainingLive / 1000).toFixed(3).padStart(6, '0');
                     
+                    // Left Status: Red, Blinking LED, "TX LIVE"
+                    statusTextEl.innerText = "TX LIVE";
+                    statusTextEl.style.color = "#ff4444";
+                    statusTextEl.style.textShadow = "0 0 8px rgba(255, 0, 0, 0.6)";
+                    ledEl.classList.remove('orange-dot');
+
+                    // Right Timer: Raw Milliseconds (White)
                     countdownEl.innerText = formattedTime;
-                    countdownEl.style.color = "#fff"; 
+                    countdownEl.style.color = "#fff";
+                    msLabelEl.style.color = "#aaa";
+                    
                     if(buttonEl) {
                         buttonEl.innerText = `> TX: ${formattedTime}s`;
                         buttonEl.style.color = "#ff4444";
@@ -309,7 +337,6 @@
             }, 30); 
         }
 
-        // Helper to dial all towers
         function dialTowers() {
             activeCalls = [];
             if (!localMicStream) return;
@@ -319,7 +346,6 @@
             });
         }
 
-        // Helper to hang up all towers
         function hangupTowers() {
             activeCalls.forEach(call => {
                 if (call) call.close();
