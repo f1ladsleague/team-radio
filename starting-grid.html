@@ -273,10 +273,23 @@
 
         function getDriverProfile(gameId) {
             let incomingName = gameId.toUpperCase();
+            
             for (let key in rosterDB) {
-                if (incomingName.includes(key)) return rosterDB[key];
+                // Now it checks both ways. 'MAPA' will successfully match 'M. MAPA'
+                if (incomingName.includes(key) || key.includes(incomingName)) {
+                    return rosterDB[key];
+                }
             }
-            return { first: "Unknown", last: gameId.substring(0,8), team: "FIA", color: "#ffffff", photo: "Unknown", logo: "Logo.png" };
+            
+            // Fallback if someone completely unknown joins the lobby
+            return { 
+                first: "Unknown", 
+                last: gameId.substring(0,8), 
+                team: "FIA", 
+                color: "#ffffff", 
+                photo: "Mapa", // Temporarily using Mapa as a fallback so it doesn't break
+                logo: "Logo.png" 
+            };
         }
 
         // ==========================================
