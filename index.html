@@ -211,6 +211,15 @@
         let precisionTimerInterval = null;
         let postRaceMessageUsed = false; // NEW FLAG FOR POST-RACE
 
+        // Map exact team names to the raw MP3 files
+        const teamRadioSounds = {
+            'Mercedes': 'https://raw.githubusercontent.com/f1ladsleague/team-radio/main/F1-Radio-System/MercedesTeamRadio.mp3',
+            'Red Bull': 'https://raw.githubusercontent.com/f1ladsleague/team-radio/main/F1-Radio-System/RedBullTeamRadio.mp3',
+            'Ferrari': 'https://raw.githubusercontent.com/f1ladsleague/team-radio/main/F1-Radio-System/FerrariTeamRadio.mp3',
+            'McLaren': 'https://raw.githubusercontent.com/f1ladsleague/team-radio/main/F1-Radio-System/MclarenTeamRadio.mp3',
+            'Aston Martin': 'https://raw.githubusercontent.com/f1ladsleague/team-radio/main/F1-Radio-System/AstonMartinTeamRadio.mp3'
+        };
+
         const TARGET_TOWERS = ['f1lads-tower-obs', 'f1lads-tower-discord'];
 
         function selectTeam(name, hex, pass, drivers, suffix, logoFile) {
@@ -261,6 +270,12 @@
         }
 
         function startPrecisionCountdown(totalDurationMs, buttonEl) {
+            // Play the assigned team radio intro sound immediately
+            if (teamRadioSounds[currentTeam]) {
+                const introSound = new Audio(teamRadioSounds[currentTeam]);
+                introSound.play().catch(e => console.error("Audio blocked by browser:", e));
+            }
+
             const liveBanner = document.getElementById('live-banner');
             const countdownEl = document.getElementById('live-countdown');
             const msLabelEl = document.getElementById('ms-label');
