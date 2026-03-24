@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>F1 Lads League | Unified Broadcast Graphics</title>
+    <title>F1 Lads | Unified Broadcast Graphics</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -24,6 +24,10 @@
             --spine-yellow: #EDF864;
             --drs-green: #00FF41; 
             --deploy-orange: #FF5A00; 
+            
+            /* 🔥 THE MISSING GAP COLORS ADDED HERE */
+            --gap-green: #00FF41;
+            --gap-red: #FF1E1E;
             
             /* Battle Focus Glass Backgrounds */
             --glass-base: rgba(12, 13, 18, 0.75);
@@ -138,7 +142,7 @@
         .interval-val { font-family: var(--font-tech); font-size: 50px; letter-spacing: 1px; transition: color 0.3s, text-shadow 0.3s; }
         .small-s { font-size: 0.5em; color: #888; margin-left: 2px; }
         
-        /* 🔥 UPGRADED GAP COLORS (Forcing overrides with !important) */
+        /* Forces the override with !important */
         .gap-decreasing { color: var(--gap-green) !important; text-shadow: 0 0 15px rgba(0,255,65,0.5) !important; }
         .gap-increasing { color: var(--gap-red) !important; text-shadow: 0 0 15px rgba(255,30,30,0.5) !important; }
 
@@ -448,11 +452,11 @@
 
             // 🔥 UPGRADED GAP MATH
             const gapEl = document.getElementById('live-gap');
-            const currentGap = parseFloat(data.gap); // Safely convert to a true number
+            const currentGap = parseFloat(data.gap); 
             
             gapEl.innerHTML = `+${currentGap.toFixed(3)}<span class="small-s">s</span>`;
             
-            // Ignore the very first tick (when previousGap is 0) to prevent a false "Red" flash
+            // Ignore the very first tick to prevent a false "Red" flash
             if (previousGap !== 0 && currentGap !== previousGap) {
                 if (currentGap < previousGap) {
                     gapEl.classList.add('gap-decreasing'); 
@@ -505,7 +509,7 @@
                 battleScene.classList.add('active');
             } else {
                 battleScene.classList.remove('active');
-                previousGap = 0; // 🔥 Reset the gap memory when graphic hides so the next battle is fresh
+                previousGap = 0; // Reset the gap memory when graphic hides
             }
         });
 
