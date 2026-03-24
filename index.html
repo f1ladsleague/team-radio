@@ -431,14 +431,21 @@
                 updateTelemetry("[ PRE-RACE : RADIO CHECKS OPEN ]", "#00D7B6");
                 checkBtns.forEach(btn => btn.style.display = "block");
                 cards.forEach(c => c.classList.add('disabled')); 
+                
+            // --- NEW QUALIFYING LOGIC ---
+            } else if (raceState === "QUALIFYING") {
+                updateTelemetry("[ QUAL : LOCKED UNTIL RACE ]", "#F47600"); // Orange lock
+                checkBtns.forEach(btn => btn.style.display = "none");
+                cards.forEach(c => c.classList.add('disabled'));
+            // ----------------------------
+                
             } else if (raceState === "POST-RACE") {
-                // NEW POST-RACE STATE LOGIC
                 checkBtns.forEach(btn => btn.style.display = "none");
                 if (postRaceMessageUsed) {
                     updateTelemetry("[ POST-RACE : COMMS CLOSED ]", "#ff4444");
                     cards.forEach(c => c.classList.add('disabled'));
                 } else {
-                    updateTelemetry("[ POST-RACE ]", "#F47600");
+                    updateTelemetry("[ POST-RACE : 1 TX REMAINING ]", "#F47600");
                     cards.forEach(c => c.classList.remove('disabled'));
                 }
             } else {
