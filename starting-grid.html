@@ -20,9 +20,31 @@
 
         * { box-sizing: border-box; }
         
-        body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background-color: transparent; color: #fff; font-family: var(--font-main); display: flex; justify-content: center; align-items: center; }
+        body { 
+            margin: 0; padding: 0; width: 100vw; height: 100vh; 
+            overflow: hidden; background-color: transparent; 
+            color: #fff; font-family: var(--font-main); 
+        }
 
-        .broadcast-canvas { position: relative; width: 100%; height: 100%; aspect-ratio: 16 / 9; max-height: 100vh; overflow: hidden; background-color: var(--bg-base); opacity: 0; transition: opacity 0.5s ease; }
+        .broadcast-canvas { 
+            position: absolute; 
+            width: 1920px; 
+            height: 1080px; 
+            left: 50%; 
+            top: 50%; 
+            transform: translate(-50%, -50%); /* Locks it perfectly center */
+            overflow: hidden; 
+            background-color: var(--bg-base); 
+            opacity: 0; 
+            transition: opacity 0.5s ease; 
+        }
+
+        /* Added this to ensure numbers never wrap or squish */
+        .pos-number { 
+            position: absolute; font-family: var(--font-tech); font-size: 250px; 
+            color: #fff; z-index: 30; text-shadow: 0 10px 20px rgba(0, 0, 0, 0.5); 
+            line-height: 1; display: flex; white-space: nowrap; 
+        }
 
         .texture-dots { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.15; background-image: radial-gradient(#ffffff 1px, transparent 1px); background-size: 20px 20px; }
         .texture-scanlines { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.05; background: repeating-linear-gradient(45deg, transparent, transparent 10px, #ffffff 10px, #ffffff 20px); }
