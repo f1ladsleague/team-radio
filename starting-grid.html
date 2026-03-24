@@ -27,7 +27,7 @@
         .texture-dots { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.15; background-image: radial-gradient(#ffffff 1px, transparent 1px); background-size: 20px 20px; }
         .texture-scanlines { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.05; background: repeating-linear-gradient(45deg, transparent, transparent 10px, #ffffff 10px, #ffffff 20px); }
 
-        #scroller-track { position: absolute; top: 0; left: 0; width: 100%; transition: transform 1.2s cubic-bezier(0.25, 1, 0.5, 1); display: flex; flex-direction: column; z-index: 5; }
+        #scroller-track { position: absolute; top: 0; left: 0; width: 100%; display: flex; flex-direction: column; z-index: 5; }
         .grid-section { width: 100%; height: 100vh; position: relative; flex-shrink: 0; overflow: hidden; }
 
         @keyframes zoomOutCenter { 0% { transform: translate(-50%, -50%) scale(4.6); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
@@ -83,17 +83,18 @@
     </div>
 
     <script>
+        // 1. REVERTED TO REAL ROSTER (Made UPPERCASE for flawless matching)
         const rosterDB = {
-            "LECLERC": { first: "Madhawa", last: "MAPA", team: "FERRARI", color: "#ED1131", photo: "Mapa", logo: "FER.png" },
-            "HAMILTON": { first: "Kekulkotawage", last: "SHIYAN", team: "FERRARI", color: "#ED1131", photo: "Shiyan", logo: "FER.png" },
-            "RUSSELL": { first: "Nuwi", last: "RODDA", team: "MERCEDES", color: "#00D7B6", photo: "Rodda", logo: "MER.png" },
-            "ANTONELLI": { first: "Keragala", last: "KALPA", team: "MERCEDES", color: "#00D7B6", photo: "Kalpa", logo: "MER.png" },
-            "NORRIS": { first: "Wimalagunaratna", last: "SAHAN", team: "MCLAREN", color: "#F47600", photo: "Sahan", logo: "MCL.png" },
-            "PIASTRI": { first: "Malimbada", last: "SAMEERA", team: "MCLAREN", color: "#F47600", photo: "Sameera", logo: "MCL.png" },
-            "ALONSO": { first: "Gamage", last: "NUWIE G", team: "ASTON MARTIN", color: "#229971", photo: "NuwieG", logo: "AM.png" },
-            "STROLL": { first: "Withanage", last: "SHAHAN", team: "ASTON MARTIN", color: "#229971", photo: "Shahan", logo: "AM.png" },
-            "Racer4965": { first: "Ekanayake", last: "NIPPA", team: "RED BULL", color: "#4781D7", photo: "NippaE", logo: "RB.png" },
-            "VERSTAPPEN": { first: "Pelpola", last: "ERANGA", team: "RED BULL", color: "#4781D7", photo: "Eranga", logo: "RB.png" }
+            "M. MAPA": { first: "Madhawa", last: "MAPA", team: "FERRARI", color: "#ED1131", photo: "Mapa", logo: "FER.png" },
+            "SHIYANK88": { first: "Kekulkotawage", last: "SHIYAN", team: "FERRARI", color: "#ED1131", photo: "Shiyan", logo: "FER.png" },
+            "NUWIRODDA": { first: "Nuwi", last: "RODDA", team: "MERCEDES", color: "#00D7B6", photo: "Rodda", logo: "MER.png" },
+            "PRODIGY__V2": { first: "Keragala", last: "KALPA", team: "MERCEDES", color: "#00D7B6", photo: "Kalpa", logo: "MER.png" },
+            "LAFORET": { first: "Wimalagunaratna", last: "SAHAN", team: "MCLAREN", color: "#F47600", photo: "Sahan", logo: "MCL.png" },
+            "S. MALIMBADA": { first: "Malimbada", last: "SAMEERA", team: "MCLAREN", color: "#F47600", photo: "Sameera", logo: "MCL.png" },
+            "NUWIE_G": { first: "Gamage", last: "NUWIE G", team: "ASTON MARTIN", color: "#229971", photo: "NuwieG", logo: "AM.png" },
+            "SHAHANW": { first: "Withanage", last: "SHAHAN", team: "ASTON MARTIN", color: "#229971", photo: "Shahan", logo: "AM.png" },
+            "RACER4965": { first: "Ekanayake", last: "NIPPA", team: "RED BULL", color: "#4781D7", photo: "NippaE", logo: "RB.png" },
+            "BIGDADDYE3002": { first: "Pelpola", last: "ERANGA", team: "RED BULL", color: "#4781D7", photo: "Eranga", logo: "RB.png" }
         };
 
         function getOrdinal(n) {
@@ -132,28 +133,38 @@
         }
 
         function buildAndPlayGrid(liveGridData, trackName) {
-            track.innerHTML = '';
+            // 2. THE SCROLL FIX: Instantly snap to top without animation
+            track.style.transition = 'none';
             track.style.transform = `translateY(0)`;
-
-            console.log("RAW F1 TELEMETRY DATA:", liveGridData);
+            track.innerHTML = '';
+            
+            // Force the browser to register the snap before turning transition back on
+            void track.offsetWidth; 
+            track.style.transition = 'transform 1.2s cubic-bezier(0.25, 1, 0.5, 1)';
 
             let finalGrid = liveGridData.map(rawDriver => {
                 let incomingName = rawDriver.gameId.toUpperCase();
                 let matchedProfile = null;
 
-                // Loop through our database and see if the incoming game name CONTAINS our key
                 for (let key in rosterDB) {
-                    if (incomingName.includes(key.toUpperCase())) {
+                    if (incomingName.includes(key)) {
                         matchedProfile = rosterDB[key];
                         break;
                     }
                 }
 
-                let profile = matchedProfile || { first: "Unknown", last: "DRIVER", team: "FIA", color: "#ffffff", photo: "Logo", logo: "Logo.png" };
+                // 3. UPDATED FALLBACK: Using UnknownDriver.png
+                let profile = matchedProfile || { 
+                    first: "Unknown", 
+                    last: "DRIVER", 
+                    team: "FIA", 
+                    color: "#ffffff", 
+                    photo: "UnknownDriver", // Updated
+                    logo: "Logo.png" 
+                };
                 return { ...profile, pos: rawDriver.position };
             });
 
-            // Fallback just in case trackName is empty
             const displayCity = trackName ? trackName : "Qualifying Result";
 
             const introDiv = document.createElement('div');
@@ -165,11 +176,10 @@
                 </div>
                 <img src="https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/Logo.png" class="intro-logo animate-zoom-center" alt="Logo">
                 <div class="intro-title animate-zoom-center">STARTING GRID</div>
-                <div class="intro-city animate-city-reveal">${displayCity}</div> 
+                <div class="intro-city animate-city-reveal">${displayCity}</div>
             `;
             track.appendChild(introDiv);
 
-            // 2. THEN ADD THE DRIVER ROWS
             const driverRows = Math.ceil(finalGrid.length / 2);
             for (let i = 0; i < finalGrid.length; i += 2) {
                 const section = document.createElement('div');
@@ -186,10 +196,8 @@
                 track.appendChild(section);
             }
 
-            // Reveal Canvas
             mainCanvas.style.opacity = '1';
             
-            // Scroll Sequence (Starts at 0, scrolls through driverRows)
             setTimeout(() => {
                 let currentRowIndex = 0;
                 function scrollNext() {
@@ -222,16 +230,7 @@
             const gridInfo = snapshot.val();
             if (gridInfo && gridInfo.trigger && gridInfo.timestamp > lastTriggerTime) {
                 lastTriggerTime = gridInfo.timestamp;
-                // Pass BOTH the data and the trackName to the builder
                 buildAndPlayGrid(gridInfo.data, gridInfo.trackName);
-            }
-        });
-
-        db.ref('startingGrid').on('value', (snapshot) => {
-            const gridInfo = snapshot.val();
-            if (gridInfo && gridInfo.trigger && gridInfo.timestamp > lastTriggerTime) {
-                lastTriggerTime = gridInfo.timestamp;
-                buildAndPlayGrid(gridInfo.data);
             }
         });
 
@@ -239,24 +238,10 @@
             const stateInfo = snapshot.val();
             if (stateInfo && stateInfo.state === "PRE-RACE") {
                 mainCanvas.style.opacity = '0';
+                track.style.transition = 'none';
                 track.style.transform = `translateY(0)`;
             }
         });
-
-        // ==========================================
-        // TEST MODE: AUTO-PLAY AFTER 2 SECONDS
-        // Delete this window.onload block before race day!
-        // ==========================================
-        //window.onload = () => {
-            //const testTelemetry = [
-                //{ gameId: "NuwiRODDA", position: 1 }, { gameId: "Racer4965", position: 2 },
-                //{ gameId: "M. MAPA", position: 3 }, { gameId: "Laforet", position: 4 },
-                //{ gameId: "Nuwie_G", position: 5 }, { gameId: "PrODigY__v2", position: 6 },
-                //{ gameId: "BiGDaddyE3002", position: 7 }, { gameId: "shiyank88", position: 8 },
-                //{ gameId: "S. Malimbada", position: 9 }, { gameId: "ShahanW", position: 10 }
-            //];
-            //setTimeout(() => { buildAndPlayGrid(testTelemetry, "Monza"); }, 2000);
-        //};
     </script>
 </body>
 </html>
