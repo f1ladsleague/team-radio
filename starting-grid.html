@@ -272,22 +272,26 @@
         };
 
         function getDriverProfile(gameId) {
-            let incomingName = gameId.toUpperCase();
+            // Strip out all spaces and punctuation from the incoming name
+            let cleanIncoming = gameId.toUpperCase().replace(/[^A-Z0-9]/g, '');
             
             for (let key in rosterDB) {
-                // Now it checks both ways. 'MAPA' will successfully match 'M. MAPA'
-                if (incomingName.includes(key) || key.includes(incomingName)) {
+                // Strip out all spaces and punctuation from the database key
+                let cleanKey = key.replace(/[^A-Z0-9]/g, '');
+                
+                // Compare the pure alphanumeric strings
+                if (cleanIncoming.includes(cleanKey) || cleanKey.includes(cleanIncoming)) {
                     return rosterDB[key];
                 }
             }
             
-            // Fallback if someone completely unknown joins the lobby
+            // Fallback for an unknown driver
             return { 
                 first: "Unknown", 
                 last: gameId.substring(0,8), 
                 team: "FIA", 
                 color: "#ffffff", 
-                photo: "Mapa", // Temporarily using Mapa as a fallback so it doesn't break
+                photo: "Mapa", 
                 logo: "Logo.png" 
             };
         }
