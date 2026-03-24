@@ -218,6 +218,9 @@
             }, 500);
         }
 
+        // ==========================================
+        // FIREBASE LISTENERS
+        // ==========================================
         const firebaseConfig = {
             apiKey: "AIzaSyCCiZwdBkZBZubr8oVsG8hkNE-x2iq3HJ0",
             authDomain: "f1-lads-team-radio-589fc.firebaseapp.com",
@@ -227,13 +230,19 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         
-        // This Date.now() prevents the graphic from auto-playing old data when you first open OBS
-        let lastTriggerTime = Date.now();
+        // NEW FIX: Simply ignore the very first load to prevent the Ghost Trigger
+        let isFirstLoad = true;
 
         db.ref('startingGrid').on('value', (snapshot) => {
             const gridInfo = snapshot.val();
-            if (gridInfo && gridInfo.trigger && gridInfo.timestamp > lastTriggerTime) {
-                lastTriggerTime = gridInfo.timestamp;
+            
+            if (isFirstLoad) {
+                isFirstLoad = false; // Flag that we've handled the startup
+                return; // Stop here, do not play the animation
+            }
+
+            // If it's a brand new trigger from the remote or game, play it!
+            if (gridInfo && gridInfo.trigger) {
                 buildAndPlayGrid(gridInfo.data, gridInfo.trackName);
             }
         });
