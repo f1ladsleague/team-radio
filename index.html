@@ -45,18 +45,9 @@
         #driver-section { display: none; text-align: center; }
 
         #live-banner {
-            display: none;
-            background: #0a0000;
-            border: 1px solid #ff0000;
-            border-left: 5px solid #ff0000;
-            border-radius: 4px;
-            margin-bottom: 25px;
-            box-shadow: 0 0 15px rgba(225, 6, 0, 0.2), inset 0 0 20px rgba(255, 0, 0, 0.1);
-            width: 100%;
-            box-sizing: border-box;
-            padding: 12px 20px;
-            justify-content: space-between;
-            align-items: center;
+            display: none; background: #0a0000; border: 1px solid #ff0000; border-left: 5px solid #ff0000;
+            border-radius: 4px; margin-bottom: 25px; box-shadow: 0 0 15px rgba(225, 6, 0, 0.2), inset 0 0 20px rgba(255, 0, 0, 0.1);
+            width: 100%; box-sizing: border-box; padding: 12px 20px; justify-content: space-between; align-items: center;
             font-family: 'Share Tech Mono', monospace;
         }
         
@@ -101,7 +92,6 @@
             box-shadow: inset 0 0 10px rgba(255,0,0,0.2); 
         }
 
-        /* --- UPDATED MOBILE VIEW (NO SCROLL, SLIGHTLY BIGGER) --- */
         @media (max-width: 768px) {
             body { padding: 15px; }
             .brand-header { margin-bottom: 15px; margin-top: 5px; }
@@ -110,7 +100,6 @@
             .dash-header { flex-direction: column; gap: 12px; margin-bottom: 20px; padding-bottom: 15px; }
             .telemetry-status { white-space: normal; word-wrap: break-word; width: 100%; box-sizing: border-box; font-size: 14px; padding: 8px 10px; }
             
-            /* Team Logos 1 Per Row */
             .team-grid { flex-direction: column; gap: 10px; margin-bottom: 20px; }
             .team-btn { width: 100%; padding: 12px; box-sizing: border-box; }
             .team-logo { height: 28px; }
@@ -120,14 +109,12 @@
             input[type="password"] { width: 100%; box-sizing: border-box; padding: 12px; font-size: 18px; }
             .login-btn { width: 100%; box-sizing: border-box; padding: 12px; font-size: 16px; }
 
-            /* Compress Live Banner */
             #live-banner { margin-bottom: 20px; padding: 10px 15px; flex-direction: column; gap: 10px; text-align: center; }
             .banner-left { justify-content: center; width: 100%; }
             .banner-right { text-align: center; width: 100%; border-top: 1px solid #330000; padding-top: 10px; }
             .data-value { font-size: 20px; }
             #live-countdown { font-size: 28px; }
 
-            /* Side-by-side Driver View */
             .driver-grid { flex-direction: row; gap: 12px; align-items: stretch; justify-content: center; }
             .driver-wrap { width: 48%; gap: 8px; }
             .driver-photo-wrap { height: 130px; }
@@ -206,7 +193,6 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // Allow pressing "Enter" to unlock the dashboard
         document.getElementById('team-pass').addEventListener('keypress', function(event) {
             if (event.key === 'Enter') {
                 event.preventDefault();
@@ -223,6 +209,7 @@
         let activeDriverFile = null, safetyTimer = null, raceState = "PRE-RACE", currentLap = 0, lastTransmittedLap = -1;
         
         let precisionTimerInterval = null;
+        let postRaceMessageUsed = false; // NEW FLAG FOR POST-RACE
 
         const TARGET_TOWERS = ['f1lads-tower-obs', 'f1lads-tower-discord'];
 
@@ -294,17 +281,14 @@
                 const currentTime = Date.now();
                 
                 if (currentTime < introEndTime) {
-                    // PHASE 1: CONNECTING / WAITING (0 to 1.5s)
                     const remainingIntro = Math.max(0, introEndTime - currentTime);
                     const formattedIntro = (remainingIntro / 1000).toFixed(3).padStart(6, '0');
                     
-                    // Left Status: Orange, Solid LED, "CONNECTING..."
                     statusTextEl.innerText = "CONNECTING...";
                     statusTextEl.style.color = "#F47600";
                     statusTextEl.style.textShadow = "0 0 8px rgba(244, 118, 0, 0.6)";
                     ledEl.classList.add('orange-dot');
 
-                    // Right Timer: Raw Milliseconds (Orange)
                     countdownEl.innerText = formattedIntro;
                     countdownEl.style.color = "#F47600";
                     msLabelEl.style.color = "#F47600";
@@ -314,7 +298,6 @@
                         buttonEl.style.color = "#F47600";
                     }
                 } else {
-                    // PHASE 2: LIVE BROADCAST (1.5s to End)
                     if(localMicStream && !localMicStream.getAudioTracks()[0].enabled) {
                         localMicStream.getAudioTracks()[0].enabled = true; 
                     }
@@ -322,13 +305,11 @@
                     const remainingLive = Math.max(0, totalEndTime - currentTime);
                     const formattedTime = (remainingLive / 1000).toFixed(3).padStart(6, '0');
                     
-                    // Left Status: Red, Blinking LED, "TX LIVE"
                     statusTextEl.innerText = "TX LIVE";
                     statusTextEl.style.color = "#ff4444";
                     statusTextEl.style.textShadow = "0 0 8px rgba(255, 0, 0, 0.6)";
                     ledEl.classList.remove('orange-dot');
 
-                    // Right Timer: Raw Milliseconds (White)
                     countdownEl.innerText = formattedTime;
                     countdownEl.style.color = "#fff";
                     msLabelEl.style.color = "#aaa";
@@ -355,9 +336,7 @@
         }
 
         function hangupTowers() {
-            activeCalls.forEach(call => {
-                if (call) call.close();
-            });
+            activeCalls.forEach(call => { if (call) call.close(); });
             activeCalls = [];
         }
 
@@ -374,11 +353,8 @@
             startPrecisionCountdown(5000, btn);
 
             db.ref('radioState').set({
-                active: true, 
-                team: currentTeam, 
-                driver: displayName + " (TEST)",
-                video: `${fileId}_${currentFileSuffix}.webm`, 
-                timestamp: Date.now()
+                active: true, team: currentTeam, driver: displayName + " (TEST)",
+                video: `${fileId}_${currentFileSuffix}.webm`, timestamp: Date.now()
             });
 
             dialTowers();
@@ -401,14 +377,22 @@
             const card = document.getElementById(`card-${fileId}`);
             
             if (!activeDriverFile) {
-                if (lineIsBusy) { return; } 
-                if (raceState === "PRE-RACE" || currentLap < 3 || currentLap === lastTransmittedLap) return;
+                if (lineIsBusy) return; 
+                
+                // NEW GUARD CHECKS (Allows 1 Post-Race message)
+                if (raceState === "PRE-RACE") return;
+                if (raceState === "RACING" && (currentLap < 3 || currentLap === lastTransmittedLap)) return;
+                if (raceState === "POST-RACE" && postRaceMessageUsed) return;
 
                 activeDriverFile = fileId;
                 card.classList.add('active');
-                lastTransmittedLap = currentLap; 
                 
-                // Changed from 12000 to 6500 (1.5s connecting + 5.0s speaking)
+                if (raceState === "POST-RACE") {
+                    postRaceMessageUsed = true;
+                } else {
+                    lastTransmittedLap = currentLap; 
+                }
+                
                 startPrecisionCountdown(6500, null);
                 
                 db.ref('radioState').set({
@@ -418,7 +402,6 @@
 
                 dialTowers();
                 
-                // Changed from 12000 to 6500
                 safetyTimer = setTimeout(() => { 
                     if(activeDriverFile) toggleRadio(activeDriverFile, displayName); 
                 }, 6500);
@@ -443,10 +426,21 @@
         function evaluateTelemetryState() {
             const checkBtns = document.querySelectorAll('.driver-check-btn');
             const cards = document.querySelectorAll('.driver-card');
+            
             if (raceState === "PRE-RACE") {
                 updateTelemetry("[ PRE-RACE : RADIO CHECKS OPEN ]", "#00D7B6");
                 checkBtns.forEach(btn => btn.style.display = "block");
                 cards.forEach(c => c.classList.add('disabled')); 
+            } else if (raceState === "POST-RACE") {
+                // NEW POST-RACE STATE LOGIC
+                checkBtns.forEach(btn => btn.style.display = "none");
+                if (postRaceMessageUsed) {
+                    updateTelemetry("[ POST-RACE : COMMS CLOSED ]", "#ff4444");
+                    cards.forEach(c => c.classList.add('disabled'));
+                } else {
+                    updateTelemetry("[ POST-RACE ]", "#F47600");
+                    cards.forEach(c => c.classList.remove('disabled'));
+                }
             } else {
                 checkBtns.forEach(btn => btn.style.display = "none");
                 if (currentLap < 3) {
@@ -476,10 +470,21 @@
 
         db.ref('telemetryState').on('value', (snapshot) => {
             const data = snapshot.val();
-            if (data && data.lap && data.lap !== currentLap) {
-                if (data.lap < currentLap) lastTransmittedLap = -1;
-                currentLap = data.lap; raceState = data.state;
-                if (!activeDriverFile) evaluateTelemetryState();
+            if (data) {
+                const newLap = data.lap || 0;
+                const newState = data.state || "PRE-RACE";
+
+                // If lap or state has changed
+                if (newLap !== currentLap || newState !== raceState) {
+                    // Reset trackers if going backwards in laps or back to lobby
+                    if (newLap < currentLap || newState === "PRE-RACE") {
+                        lastTransmittedLap = -1;
+                        postRaceMessageUsed = false;
+                    }
+                    currentLap = newLap;
+                    raceState = newState;
+                    if (!activeDriverFile) evaluateTelemetryState();
+                }
             }
         });
     </script>
