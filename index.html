@@ -220,6 +220,8 @@
             'Aston Martin': 'https://raw.githubusercontent.com/f1ladsleague/team-radio/main/F1-Radio-System/AstonMartinTeamRadio.mp3'
         };
 
+        const connectingSoundUrl = 'https://raw.githubusercontent.com/f1ladsleague/team-radio/main/F1-Radio-System/ConnectingBeep.mp3';
+
         const TARGET_TOWERS = ['f1lads-tower-obs', 'f1lads-tower-discord'];
 
         function selectTeam(name, hex, pass, drivers, suffix, logoFile) {
@@ -270,10 +272,18 @@
         }
 
         function startPrecisionCountdown(totalDurationMs, buttonEl) {
-            // Play the assigned team radio intro sound immediately
+            // 1. Play the radio connecting beep/static immediately
+            if (connectingSoundUrl) {
+                const beepSound = new Audio(connectingSoundUrl);
+                beepSound.play().catch(e => console.error("Beep blocked:", e));
+            }
+
+            // 2. Delay the Team Radio voice line (e.g., 800ms delay)
             if (teamRadioSounds[currentTeam]) {
-                const introSound = new Audio(teamRadioSounds[currentTeam]);
-                introSound.play().catch(e => console.error("Audio blocked by browser:", e));
+                setTimeout(() => {
+                    const teamVoice = new Audio(teamRadioSounds[currentTeam]);
+                    teamVoice.play().catch(e => console.error("Voice blocked:", e));
+                }, 800); // <-- Adjust this number (in milliseconds) to perfectly time the voice after the beep
             }
 
             const liveBanner = document.getElementById('live-banner');
@@ -339,7 +349,7 @@
                     }
                 }
             }, 30); 
-        }
+        }}
 
         function dialTowers() {
             activeCalls = [];
