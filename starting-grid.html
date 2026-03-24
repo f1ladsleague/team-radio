@@ -234,14 +234,7 @@
             }
         });
 
-        db.ref('telemetryState').on('value', (snapshot) => {
-            const stateInfo = snapshot.val();
-            if (stateInfo && stateInfo.state === "PRE-RACE") {
-                mainCanvas.style.opacity = '0';
-                track.style.transition = 'none';
-                track.style.transform = `translateY(0)`;
-            }
-        });
+        
     </script>
 </body>
 </html>
