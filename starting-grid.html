@@ -20,27 +20,15 @@
 
         * { box-sizing: border-box; }
         
-        /* 1. FORCE EXACT BODY DIMENSIONS */
-        body { 
-            margin: 0; padding: 0; width: 1920px; height: 1080px; 
-            overflow: hidden; background-color: transparent; color: #fff; 
-            font-family: var(--font-main); 
-        }
+        body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background-color: transparent; color: #fff; font-family: var(--font-main); display: flex; justify-content: center; align-items: center; }
 
-        /* 2. FORCE EXACT CANVAS DIMENSIONS */
-        .broadcast-canvas { 
-            position: absolute; top: 0; left: 0; 
-            width: 1920px; height: 1080px; 
-            overflow: hidden; background-color: var(--bg-base); 
-            opacity: 0; transition: opacity 0.5s ease; 
-        }
+        .broadcast-canvas { position: relative; width: 100%; height: 100%; aspect-ratio: 16 / 9; max-height: 100vh; overflow: hidden; background-color: var(--bg-base); opacity: 0; transition: opacity 0.5s ease; }
 
         .texture-dots { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.15; background-image: radial-gradient(#ffffff 1px, transparent 1px); background-size: 20px 20px; }
         .texture-scanlines { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.05; background: repeating-linear-gradient(45deg, transparent, transparent 10px, #ffffff 10px, #ffffff 20px); }
 
-        /* 3. FORCE TRACK & SECTION DIMENSIONS */
-        #scroller-track { position: absolute; top: 0; left: 0; width: 1920px; display: flex; flex-direction: column; z-index: 5; }
-        .grid-section { width: 1920px; height: 1080px; position: relative; flex-shrink: 0; overflow: hidden; }
+        #scroller-track { position: absolute; top: 0; left: 0; width: 100%; display: flex; flex-direction: column; z-index: 5; }
+        .grid-section { width: 100%; height: 100vh; position: relative; flex-shrink: 0; overflow: hidden; }
 
         @keyframes zoomOutCenter { 0% { transform: translate(-50%, -50%) scale(4.6); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
         @keyframes zoomOutSpine { 0% { transform: translateX(-50%) scale(4.6); opacity: 0; } 100% { transform: translateX(-50%) scale(1); opacity: 1; } }
@@ -57,7 +45,7 @@
         .spine-center-wrapper { position: absolute; left: 50%; top: 0; bottom: 0; transform: translateX(-50%); width: 69px; display: flex; flex-direction: column; align-items: center; z-index: 110; }
         .spine-block-top { width: 100%; height: 420px; position: absolute; top: 0; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 calc(100% - 60px)); display: flex; justify-content: space-between; }
         .spine-block-bottom { width: 100%; height: 450px; position: absolute; bottom: 0; clip-path: polygon(0 0, 100% 60px, 100% 100%, 0 100%); display: flex; justify-content: space-between; }
-        .spine-segment { width: 31px; height: 100%; background-color: var(--f1-red); box-shadow: 0 0 10px rgba(225, 6, 0, 0.5); flex-shrink: 0; }
+        .spine-segment { width: 31px; height: 100%; background-color: var(--f1-red); box-shadow: 0 0 10px rgba(225, 6, 0, 0.5); }
         .driver-spine-top { height: 380px; }
         .driver-spine-bottom { height: 365px; }
         .spine-vertical-text { position: absolute; top: 50%; transform: translateY(-50%) rotate(180deg); writing-mode: vertical-rl; font-family: var(--font-tech); font-size: 40px; color: var(--spine-yellow); letter-spacing: 5px; white-space: nowrap; text-shadow: 0 0 15px rgba(237, 248, 100, 0.4); z-index: 50; }
@@ -97,7 +85,7 @@
     <script>
         // 1. REVERTED TO REAL ROSTER (Made UPPERCASE for flawless matching)
         const rosterDB = {
-            "M. MAPA": { first: "Madhawa", last: "MAPA", team: "FERRARI", color: "#ED1131", photo: "Mapa", logo: "FER.png" },
+            "LECLERC": { first: "Madhawa", last: "MAPA", team: "FERRARI", color: "#ED1131", photo: "Mapa", logo: "FER.png" },
             "SHIYANK88": { first: "Kekulkotawage", last: "SHIYAN", team: "FERRARI", color: "#ED1131", photo: "Shiyan", logo: "FER.png" },
             "NUWIRODDA": { first: "Nuwi", last: "RODDA", team: "MERCEDES", color: "#00D7B6", photo: "Rodda", logo: "MER.png" },
             "PRODIGY__V2": { first: "Keragala", last: "KALPA", team: "MERCEDES", color: "#00D7B6", photo: "Kalpa", logo: "MER.png" },
@@ -215,8 +203,7 @@
                 function scrollNext() {
                     if (currentRowIndex < driverRows) {
                         currentRowIndex++;
-                        // Changed from 100vh to exactly 1080px per row
-                        track.style.transform = `translateY(-${currentRowIndex * 1080}px)`;
+                        track.style.transform = `translateY(-${currentRowIndex * 100}vh)`;
                         setTimeout(scrollNext, 5000); 
                     } else {
                         setTimeout(() => { mainCanvas.style.opacity = '0'; }, 6000);
@@ -247,7 +234,14 @@
             }
         });
 
-        
+        db.ref('telemetryState').on('value', (snapshot) => {
+            const stateInfo = snapshot.val();
+            if (stateInfo && stateInfo.state === "PRE-RACE") {
+                mainCanvas.style.opacity = '0';
+                track.style.transition = 'none';
+                track.style.transform = `translateY(0)`;
+            }
+        });
     </script>
 </body>
 </html>
