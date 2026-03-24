@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>F1 Lads | Unified Broadcast Graphics</title>
+    <title>F1 Lads League | Unified Broadcast Graphics</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -137,8 +137,10 @@
         .center-interval { width: 320px; height: 100%; background: linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.95) 20%, rgba(0,0,0,0.95) 80%, transparent 100%); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 5; }
         .interval-val { font-family: var(--font-tech); font-size: 50px; letter-spacing: 1px; transition: color 0.3s, text-shadow 0.3s; }
         .small-s { font-size: 0.5em; color: #888; margin-left: 2px; }
-        .gap-decreasing { color: var(--gap-green); text-shadow: 0 0 15px rgba(0,255,65,0.5); }
-        .gap-increasing { color: var(--gap-red); text-shadow: 0 0 15px rgba(255,30,30,0.5); }
+        
+        /* 🔥 UPGRADED GAP COLORS (Forcing overrides with !important) */
+        .gap-decreasing { color: var(--gap-green) !important; text-shadow: 0 0 15px rgba(0,255,65,0.5) !important; }
+        .gap-increasing { color: var(--gap-red) !important; text-shadow: 0 0 15px rgba(255,30,30,0.5) !important; }
 
         .bottom-bar { width: 100%; height: 140px; background: var(--glass-base); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); display: flex; justify-content: space-between; align-items: center; position: relative; overflow: hidden; border-radius: 0 0 20px 20px; }
         .bf-texture-grid { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.15; background-image: radial-gradient(#ffffff 1px, transparent 1px); background-size: 10px 10px; pointer-events: none; }
@@ -272,28 +274,14 @@
         };
 
         function getDriverProfile(gameId) {
-            // Strip out all spaces and punctuation from the incoming name
             let cleanIncoming = gameId.toUpperCase().replace(/[^A-Z0-9]/g, '');
-            
             for (let key in rosterDB) {
-                // Strip out all spaces and punctuation from the database key
                 let cleanKey = key.replace(/[^A-Z0-9]/g, '');
-                
-                // Compare the pure alphanumeric strings
                 if (cleanIncoming.includes(cleanKey) || cleanKey.includes(cleanIncoming)) {
                     return rosterDB[key];
                 }
             }
-            
-            // Fallback for an unknown driver
-            return { 
-                first: "Unknown", 
-                last: gameId.substring(0,8), 
-                team: "FIA", 
-                color: "#ffffff", 
-                photo: "Mapa", 
-                logo: "Logo.png" 
-            };
+            return { first: "Unknown", last: gameId.substring(0,8), team: "FIA", color: "#ffffff", photo: "Mapa", logo: "Logo.png" };
         }
 
         // ==========================================
@@ -335,7 +323,6 @@
         }
 
         function buildAndPlayGrid(liveGridData, trackName) {
-            // Hide Battle Graphic just in case
             document.getElementById('battle-scene').classList.remove('active');
             
             track.style.transition = 'none';
@@ -459,18 +446,28 @@
             updateTabs('left', data.driver1.drs, data.driver1.deploying);
             updateTabs('right', data.driver2.drs, data.driver2.deploying);
 
-            // Gap Math
+            // 🔥 UPGRADED GAP MATH
             const gapEl = document.getElementById('live-gap');
-            gapEl.innerHTML = `+${parseFloat(data.gap).toFixed(3)}<span class="small-s">s</span>`;
+            const currentGap = parseFloat(data.gap); // Safely convert to a true number
             
-            if (data.gap < previousGap) {
-                gapEl.classList.add('gap-decreasing'); gapEl.classList.remove('gap-increasing');
-            } else if (data.gap > previousGap) {
-                gapEl.classList.add('gap-increasing'); gapEl.classList.remove('gap-decreasing');
+            gapEl.innerHTML = `+${currentGap.toFixed(3)}<span class="small-s">s</span>`;
+            
+            // Ignore the very first tick (when previousGap is 0) to prevent a false "Red" flash
+            if (previousGap !== 0 && currentGap !== previousGap) {
+                if (currentGap < previousGap) {
+                    gapEl.classList.add('gap-decreasing'); 
+                    gapEl.classList.remove('gap-increasing');
+                } else if (currentGap > previousGap) {
+                    gapEl.classList.add('gap-increasing'); 
+                    gapEl.classList.remove('gap-decreasing');
+                }
             }
-            previousGap = data.gap;
+            
+            // Only save valid numbers for the next tick
+            if (!isNaN(currentGap)) {
+                previousGap = currentGap;
+            }
         }
-
 
         // ==========================================
         // FIREBASE INITIALIZATION & LISTENERS
@@ -503,13 +500,12 @@
             const battleScene = document.getElementById('battle-scene');
 
             if (bfData && bfData.show) {
-                // Hide Grid if it's somehow playing
                 gridScene.classList.remove('active'); 
-                
                 populateBattleFocus(bfData);
                 battleScene.classList.add('active');
             } else {
                 battleScene.classList.remove('active');
+                previousGap = 0; // 🔥 Reset the gap memory when graphic hides so the next battle is fresh
             }
         });
 
