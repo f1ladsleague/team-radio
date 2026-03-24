@@ -3,31 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>F1 Lads | Starting Grid Graphic</title>
+    <title>F1 Lads | Unified Broadcast Graphics</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
     <style>
+        /* ==========================================
+           1. CORE FONTS & VARIABLES
+           ========================================== */
         @font-face { font-family: 'Formula1'; src: url('Formula1-Black.ttf') format('truetype'); }
         @font-face { font-family: 'Northwell'; src: url('Northwell.ttf') format('truetype'); }
         @font-face { font-family: 'KHInterference'; src: url('KHInterferenceTRIAL-Bold.otf') format('opentype'); }
 
         :root {
-            --bg-base: #060609; --f1-red: #e10600; --city-red: #FF2400; --spine-yellow: #EDF864;
-            --font-main: 'Formula1', sans-serif; --font-brush: 'Northwell', cursive; --font-tech: 'KHInterference', sans-serif;
+            /* Shared Colors */
+            --bg-base: #060609; 
+            --f1-red: #e10600; 
+            --city-red: #FF2400; 
+            --spine-yellow: #EDF864;
+            --drs-green: #00FF41; 
+            --deploy-orange: #FF5A00; 
+            
+            /* Battle Focus Glass Backgrounds */
+            --glass-base: rgba(12, 13, 18, 0.75);
+            --glass-dark: rgba(8, 9, 12, 0.85);
+
+            /* Fonts */
+            --font-main: 'Formula1', sans-serif; 
+            --font-brush: 'Northwell', cursive; 
+            --font-tech: 'KHInterference', sans-serif;
         }
 
         * { box-sizing: border-box; }
         
         /* 1920x1080 LOCK */
-        body { margin: 0; padding: 0; width: 1920px; height: 1080px; overflow: hidden; background-color: transparent; color: #fff; font-family: var(--font-main); display: flex; justify-content: center; align-items: center; }
+        body { 
+            margin: 0; padding: 0; width: 1920px; height: 1080px; 
+            overflow: hidden; background-color: transparent; 
+            color: #fff; font-family: var(--font-main); 
+        }
 
-        .broadcast-canvas { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; overflow: hidden; background-color: var(--bg-base); opacity: 0; transition: opacity 0.5s ease; }
+        /* SCENE MANAGER */
+        .scene {
+            position: absolute; top: 0; left: 0; width: 1920px; height: 1080px;
+            opacity: 0; pointer-events: none; transition: opacity 0.5s ease;
+        }
+        .scene.active { opacity: 1; pointer-events: auto; }
 
+        /* ==========================================
+           2. STARTING GRID STYLES
+           ========================================== */
+        #grid-scene { background-color: var(--bg-base); }
         .texture-dots { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.15; background-image: radial-gradient(#ffffff 1px, transparent 1px); background-size: 20px 20px; }
         .texture-scanlines { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.05; background: repeating-linear-gradient(45deg, transparent, transparent 10px, #ffffff 10px, #ffffff 20px); }
-
+        
         #scroller-track { position: absolute; top: 0; left: 0; width: 1920px; display: flex; flex-direction: column; z-index: 5; }
         .grid-section { width: 1920px; height: 1080px; position: relative; flex-shrink: 0; overflow: hidden; }
 
@@ -39,7 +69,6 @@
         .animate-zoom-spine { animation: zoomOutSpine 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
         .animate-city-reveal { animation: cityRevealLeftToRight 1.2s 1s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 
-        /* MATHEMATICALLY DOWNSCALED FROM 2560x1271 to 1920x1080 */
         .intro-logo { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); max-width: 230px; max-height: 153px; object-fit: contain; filter: drop-shadow(0 0 15px rgba(255,255,255,0.1)); z-index: 10; }
         .intro-title { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 100px; letter-spacing: 4px; margin: 0; white-space: nowrap; z-index: 10; }
         .intro-city { position: absolute; left: 50%; top: 60%; transform: translate(-50%, -50%); font-family: var(--font-brush); font-size: 93px; color: var(--city-red); margin: 0; white-space: nowrap; text-shadow: 2px 2px 5px rgba(0,0,0,0.8); z-index: 11; }
@@ -62,9 +91,9 @@
         .sidebar-team-name { font-size: 20px; color: #fff; writing-mode: vertical-rl; letter-spacing: 3px; white-space: nowrap; transform: rotate(180deg); }
         .sidebar-logo { width: 38px; height: auto; object-fit: contain; }
         
-        .driver-photo { position: absolute; bottom: 0; top: 12px; height: 140%; object-fit: contain; z-index: 10; filter: drop-shadow(0 15px 25px rgba(0,0,0,0.8)); }
-        .left-side .driver-photo { left: calc(60px + (100% - 150px) / 2); transform: translateX(-50%); } 
-        .right-side .driver-photo { right: calc(60px + (100% - 150px) / 2); transform: translateX(50%); }
+        .grid-driver-photo { position: absolute; bottom: 0; top: 12px; height: 140%; object-fit: contain; z-index: 10; filter: drop-shadow(0 15px 25px rgba(0,0,0,0.8)); }
+        .left-side .grid-driver-photo { left: calc(60px + (100% - 150px) / 2); transform: translateX(-50%); } 
+        .right-side .grid-driver-photo { right: calc(60px + (100% - 150px) / 2); transform: translateX(50%); }
 
         .pos-number { position: absolute; font-family: var(--font-tech); font-size: 188px; color: #fff; z-index: 30; text-shadow: 0 10px 20px rgba(0, 0, 0, 0.5); line-height: 1; display: flex; white-space: nowrap; }
         .left-side .pos-number { top: 493px; left: 675px; } 
@@ -80,17 +109,155 @@
         .right-side .name-container { right: calc(60px + (100% - 150px) / 2); transform: translateX(50%); }
         .last-name { font-family: var(--font-main); font-size: 82px; color: var(--team-color); text-transform: uppercase; line-height: 0.8; z-index: 1; text-shadow: 0 5px 15px rgba(0,0,0,0.8); }
         .first-name { font-family: var(--font-brush); font-size: 85px; color: #fff; text-transform: capitalize; line-height: 0.5; z-index: 2; text-shadow: 2px 2px 10px rgba(0,0,0,0.8); position: relative; left: -15px; top: 8px; }
+
+        /* ==========================================
+           3. BATTLE FOCUS STYLES
+           ========================================== */
+        #battle-scene { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; padding-bottom: 50px; }
+        
+        .bf-logo { height: 55px; object-fit: contain; margin-bottom: 15px; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.8)); z-index: 50; transition: opacity 0.3s; }
+        .battle-container { width: 1150px; display: flex; flex-direction: column; position: relative; z-index: 10; border-radius: 20px; box-shadow: 0 20px 35px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.1); transform: translateY(20px); transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        #battle-scene.active .battle-container { transform: translateY(0); }
+
+        .top-bar { width: 100%; height: 75px; display: flex; justify-content: space-between; align-items: center; background: var(--glass-dark); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); position: relative; z-index: 20; border-bottom: 1px solid rgba(255,255,255,0.05); border-radius: 20px 20px 0 0; overflow: hidden; }
+        .driver-header { flex: 1; height: 100%; display: flex; align-items: center; padding: 0 30px; gap: 15px; position: relative; overflow: visible; }
+        
+        .bg-gradient { position: absolute; top: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.8; }
+        .header-left .bg-gradient { left: 0; background: linear-gradient(90deg, var(--team-color) 0%, transparent 90%); border-top-left-radius: 20px; }
+        .header-right .bg-gradient { right: 0; background: linear-gradient(270deg, var(--team-color) 0%, transparent 90%); border-top-right-radius: 20px; }
+        .header-right { flex-direction: row-reverse; }
+
+        .bf-driver-photo { position: absolute; bottom: -50px; height: 280px; z-index: 0; opacity: 0.20; scale: 2.5; -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 90%); mask-image: linear-gradient(to bottom, black 50%, transparent 90%); }
+        .header-left .bf-driver-photo { left: 80px; }
+        .header-right .bf-driver-photo { right: 80px; }
+
+        .team-logo { height: 42px; object-fit: contain; z-index: 2; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8)); }
+        .driver-name { font-size: 36px; letter-spacing: 2px; margin-top: 5px; z-index: 2; text-shadow: 0 4px 10px rgba(0,0,0,0.9); }
+
+        .center-interval { width: 320px; height: 100%; background: linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.95) 20%, rgba(0,0,0,0.95) 80%, transparent 100%); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 5; }
+        .interval-val { font-family: var(--font-tech); font-size: 50px; letter-spacing: 1px; transition: color 0.3s, text-shadow 0.3s; }
+        .small-s { font-size: 0.5em; color: #888; margin-left: 2px; }
+        .gap-decreasing { color: var(--gap-green); text-shadow: 0 0 15px rgba(0,255,65,0.5); }
+        .gap-increasing { color: var(--gap-red); text-shadow: 0 0 15px rgba(255,30,30,0.5); }
+
+        .bottom-bar { width: 100%; height: 140px; background: var(--glass-base); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); display: flex; justify-content: space-between; align-items: center; position: relative; overflow: hidden; border-radius: 0 0 20px 20px; }
+        .bf-texture-grid { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.15; background-image: radial-gradient(#ffffff 1px, transparent 1px); background-size: 10px 10px; pointer-events: none; }
+
+        .telemetry-block { width: 350px; height: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0 35px; z-index: 10; }
+        .tel-right { flex-direction: row-reverse; }
+
+        .speed-box { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .speed-val { font-family: var(--font-tech); font-size: 52px; line-height: 1; text-shadow: 0 0 15px rgba(255,255,255,0.2); }
+        .speed-unit { font-family: var(--font-tech); font-size: 18px; color: #E0E0E0; letter-spacing: 2px; margin-top: -2px; font-weight: bold; text-shadow: 0 0 10px rgba(255,255,255,0.3); }
+
+        .tabs-stack { display: flex; flex-direction: column; gap: 8px; }
+        .status-tab { width: 130px; height: 36px; background: rgba(0,0,0,0.5); border: 2px solid #333; border-radius: 4px; font-family: var(--font-tech); font-size: 18px; color: #666; display: flex; justify-content: center; align-items: center; transition: all 0.2s ease; }
+
+        @keyframes pulseDrsActive { 0% { background-color: rgba(0, 255, 65, 0.6); box-shadow: 0 0 10px var(--drs-green); color: #fff; border-color: var(--drs-green); } 100% { background-color: var(--drs-green); box-shadow: 0 0 35px var(--drs-green), inset 0 0 15px var(--drs-green); color: #000; border-color: #fff; } }
+        @keyframes pulseOvtActive { 0% { background-color: rgba(255, 90, 0, 0.6); box-shadow: 0 0 10px var(--deploy-orange); color: #fff; border-color: var(--deploy-orange); } 100% { background-color: var(--deploy-orange); box-shadow: 0 0 35px var(--deploy-orange), inset 0 0 15px var(--deploy-orange); color: #fff; border-color: #fff; text-shadow: 0 0 8px #fff; } }
+
+        .tab-drs.active { animation: pulseDrsActive 0.6s infinite alternate ease-in-out !important; font-weight: bold; }
+        .tab-ovt.active { animation: pulseOvtActive 0.6s infinite alternate ease-in-out !important; font-weight: bold; }
+
+        .battery-hub { width: 450px; height: 100%; display: flex; align-items: center; justify-content: center; gap: 20px; z-index: 10; }
+        .hub-percent { font-family: var(--font-tech); font-size: 55px; width: 130px; text-align: center; font-weight: bold; transition: color 0.3s ease; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+        .hub-lightning { font-family: var(--font-tech); font-size: 32px; color: #555; }
+
+        .battery-container { display: flex; flex-direction: column; align-items: center; padding-bottom: 5px; }
+        .battery-nub { width: 22px; height: 6px; background: #888; border-radius: 4px 4px 0 0; }
+        .battery-shell { width: 50px; height: 95px; border: 3px solid #888; border-radius: 6px; padding: 3px; display: flex; align-items: flex-end; position: relative; overflow: hidden; transition: all 0.3s ease; background: rgba(0,0,0,0.4); --glow-color: #888; }
+        .battery-juice { width: 100%; border-radius: 2px; transition: height 0.3s linear, background-color 0.3s ease; }
+
+        @keyframes batteryGlowPulse { 0% { box-shadow: 0 0 10px var(--glow-color), inset 0 0 5px var(--glow-color); border-color: var(--glow-color); } 100% { box-shadow: 0 0 40px var(--glow-color), inset 0 0 20px var(--glow-color); border-color: #fff; } }
+        .battery-shell.deploying { animation: batteryGlowPulse 0.6s infinite alternate ease-in-out; }
+
     </style>
 </head>
 <body>
 
-    <div class="broadcast-canvas" id="main-canvas">
+    <div class="scene" id="grid-scene">
         <div class="texture-dots"></div>
         <div class="texture-scanlines"></div>
         <div id="scroller-track"></div>
     </div>
 
+    <div class="scene" id="battle-scene">
+        <img class="bf-logo" src="https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/Logo.png">
+        <div class="battle-container">
+            <div class="top-bar">
+                <div class="driver-header header-left" id="bf-left-header" style="--team-color: var(--ferrari);">
+                    <div class="bg-gradient"></div>
+                    <img class="bf-driver-photo" id="bf-left-photo" src="" onerror="this.style.display='none'">
+                    <img class="team-logo" id="bf-left-logo" src="">
+                    <div class="driver-name" id="bf-left-name">MAPA</div>
+                </div>
+
+                <div class="center-interval">
+                    <div class="interval-val" id="live-gap">+0.000<span class="small-s">s</span></div>
+                </div>
+
+                <div class="driver-header header-right" id="bf-right-header" style="--team-color: var(--redbull);">
+                    <div class="bg-gradient"></div>
+                    <img class="bf-driver-photo" id="bf-right-photo" src="" onerror="this.style.display='none'">
+                    <img class="team-logo" id="bf-right-logo" src="">
+                    <div class="driver-name" id="bf-right-name">NIPPA E</div>
+                </div>
+            </div>
+
+            <div class="bottom-bar">
+                <div class="bf-texture-grid"></div>
+
+                <div class="telemetry-block tel-left">
+                    <div class="speed-box">
+                        <div class="speed-val" id="left-speed">0</div>
+                        <div class="speed-unit">KM/H</div>
+                    </div>
+                    <div class="tabs-stack">
+                        <div class="status-tab tab-drs" id="left-drs">DRS</div>
+                        <div class="status-tab tab-ovt" id="left-ovt">OVERTAKE</div>
+                    </div>
+                </div>
+
+                <div class="battery-hub">
+                    <div class="hub-percent" id="left-percent">0%</div>
+                    
+                    <div class="battery-container">
+                        <div class="battery-nub"></div>
+                        <div class="battery-shell" id="left-batt-shell">
+                            <div class="battery-juice" id="left-batt-juice" style="height: 0%;"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="hub-lightning">⚡</div>
+                    
+                    <div class="battery-container">
+                        <div class="battery-nub"></div>
+                        <div class="battery-shell" id="right-batt-shell">
+                            <div class="battery-juice" id="right-batt-juice" style="height: 0%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="hub-percent" id="right-percent">0%</div>
+                </div>
+
+                <div class="telemetry-block tel-right">
+                    <div class="speed-box">
+                        <div class="speed-val" id="right-speed">0</div>
+                        <div class="speed-unit">KM/H</div>
+                    </div>
+                    <div class="tabs-stack">
+                        <div class="status-tab tab-drs" id="right-drs">DRS</div>
+                        <div class="status-tab tab-ovt" id="right-ovt">OVERTAKE</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
+        // ==========================================
+        // SHARED ROSTER DATABASE
+        // ==========================================
         const rosterDB = {
             "M. MAPA": { first: "Madhawa", last: "MAPA", team: "FERRARI", color: "#ED1131", photo: "Mapa", logo: "FER.png" },
             "SHIYANK88": { first: "Kekulkotawage", last: "SHIYAN", team: "FERRARI", color: "#ED1131", photo: "Shiyan", logo: "FER.png" },
@@ -100,9 +267,23 @@
             "S. MALIMBADA": { first: "Malimbada", last: "SAMEERA", team: "MCLAREN", color: "#F47600", photo: "Sameera", logo: "MCL.png" },
             "NUWIE_G": { first: "Gamage", last: "NUWIE G", team: "ASTON MARTIN", color: "#229971", photo: "NuwieG", logo: "AM.png" },
             "SHAHANW": { first: "Withanage", last: "SHAHAN", team: "ASTON MARTIN", color: "#229971", photo: "Shahan", logo: "AM.png" },
-            "RACER4965": { first: "Ekanayake", last: "NIPPA", team: "RED BULL", color: "#4781D7", photo: "NippaE", logo: "RB.png" },
+            "RACER4965": { first: "Ekanayake", last: "NIPPA E", team: "RED BULL", color: "#4781D7", photo: "NippaE", logo: "RB.png" },
             "BIGDADDYE3002": { first: "Pelpola", last: "ERANGA", team: "RED BULL", color: "#4781D7", photo: "Eranga", logo: "RB.png" }
         };
+
+        function getDriverProfile(gameId) {
+            let incomingName = gameId.toUpperCase();
+            for (let key in rosterDB) {
+                if (incomingName.includes(key)) return rosterDB[key];
+            }
+            return { first: "Unknown", last: gameId.substring(0,8), team: "FIA", color: "#ffffff", photo: "Unknown", logo: "Logo.png" };
+        }
+
+        // ==========================================
+        // STARTING GRID LOGIC
+        // ==========================================
+        const track = document.getElementById('scroller-track');
+        const gridScene = document.getElementById('grid-scene');
 
         function getOrdinal(n) {
             if (n === "DSQ") return "";
@@ -110,9 +291,6 @@
             const v = n % 100;
             return s[(v - 20) % 10] || s[v] || s[0];
         }
-
-        const track = document.getElementById('scroller-track');
-        const mainCanvas = document.getElementById('main-canvas');
 
         function generateDriverHTML(driver, side) {
             if (!driver) return `<div class="driver-half ${side}-side"></div>`; 
@@ -130,7 +308,7 @@
                         <img class="sidebar-logo" src="https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/${driver.logo}">
                     </div>
                     <div class="pos-number${positionClass}">${displayPos}${ordinal}</div>
-                    <img class="driver-photo" src="https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/${driver.photo}.png" onerror="this.style.display='none'">
+                    <img class="grid-driver-photo" src="https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/${driver.photo}.png" onerror="this.style.display='none'">
                     <div class="name-container">
                         <div class="first-name">${driver.first}</div>
                         <div class="last-name">${driver.last}</div>
@@ -140,32 +318,17 @@
         }
 
         function buildAndPlayGrid(liveGridData, trackName) {
+            // Hide Battle Graphic just in case
+            document.getElementById('battle-scene').classList.remove('active');
+            
             track.style.transition = 'none';
             track.style.transform = `translateY(0)`;
             track.innerHTML = '';
-            
             void track.offsetWidth; 
             track.style.transition = 'transform 1.2s cubic-bezier(0.25, 1, 0.5, 1)';
 
             let finalGrid = liveGridData.map(rawDriver => {
-                let incomingName = rawDriver.gameId.toUpperCase();
-                let matchedProfile = null;
-
-                for (let key in rosterDB) {
-                    if (incomingName.includes(key)) {
-                        matchedProfile = rosterDB[key];
-                        break;
-                    }
-                }
-
-                let profile = matchedProfile || { 
-                    first: "Unknown", 
-                    last: "DRIVER", 
-                    team: "FIA", 
-                    color: "#ffffff", 
-                    photo: "UnknownDriver", 
-                    logo: "Logo.png" 
-                };
+                let profile = getDriverProfile(rawDriver.gameId);
                 return { ...profile, pos: rawDriver.position };
             });
 
@@ -200,18 +363,17 @@
                 track.appendChild(section);
             }
 
-            mainCanvas.style.opacity = '1';
+            gridScene.classList.add('active');
             
             setTimeout(() => {
                 let currentRowIndex = 0;
                 function scrollNext() {
                     if (currentRowIndex < driverRows) {
                         currentRowIndex++;
-                        // Scaled Scroll to match 1080px canvas
                         track.style.transform = `translateY(-${currentRowIndex * 1080}px)`;
                         setTimeout(scrollNext, 5000); 
                     } else {
-                        setTimeout(() => { mainCanvas.style.opacity = '0'; }, 6000);
+                        setTimeout(() => { gridScene.classList.remove('active'); }, 6000);
                     }
                 }
                 setTimeout(scrollNext, 4500); 
@@ -219,7 +381,82 @@
         }
 
         // ==========================================
-        // FIREBASE LISTENERS (Bulletproof Sync)
+        // BATTLE FOCUS LOGIC
+        // ==========================================
+        let previousGap = 0;
+
+        function getSolidBatteryColor(percent) {
+            if (percent > 50) return '#00FF41'; 
+            if (percent < 20) return '#FF1E1E'; 
+            const hue = ((percent - 20) / 30) * 60; 
+            return `hsl(${hue}, 100%, 50%)`;
+        }
+
+        function updateERS(side, percentage, isDeploying) {
+            const juice = document.getElementById(`${side}-batt-juice`);
+            const shell = document.getElementById(`${side}-batt-shell`);
+            const textPct = document.getElementById(`${side}-percent`);
+            
+            juice.style.height = `${percentage}%`;
+            textPct.innerText = `${Math.round(percentage)}%`;
+
+            const liveColor = getSolidBatteryColor(percentage);
+            juice.style.backgroundColor = liveColor;
+            textPct.style.color = liveColor;
+
+            shell.style.setProperty('--glow-color', liveColor);
+            if (isDeploying) shell.classList.add('deploying'); else shell.classList.remove('deploying');
+        }
+
+        function updateTabs(side, drsActive, ovtActive) {
+            const drsTab = document.getElementById(`${side}-drs`);
+            const ovtTab = document.getElementById(`${side}-ovt`);
+            if(drsActive) drsTab.classList.add('active'); else drsTab.classList.remove('active');
+            if(ovtActive) ovtTab.classList.add('active'); else ovtTab.classList.remove('active');
+        }
+
+        function populateBattleFocus(data) {
+            // Driver Identities
+            const p1 = getDriverProfile(data.driver1.gameId);
+            const p2 = getDriverProfile(data.driver2.gameId);
+
+            document.getElementById('bf-left-header').style.setProperty('--team-color', p1.color);
+            document.getElementById('bf-left-name').innerText = p1.last;
+            document.getElementById('bf-left-photo').src = `https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/${p1.photo}.png`;
+            document.getElementById('bf-left-photo').style.display = 'block';
+            document.getElementById('bf-left-logo').src = `https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/${p1.logo}`;
+
+            document.getElementById('bf-right-header').style.setProperty('--team-color', p2.color);
+            document.getElementById('bf-right-name').innerText = p2.last;
+            document.getElementById('bf-right-photo').src = `https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/${p2.photo}.png`;
+            document.getElementById('bf-right-photo').style.display = 'block';
+            document.getElementById('bf-right-logo').src = `https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/${p2.logo}`;
+
+            // Telemetry
+            document.getElementById('left-speed').innerText = data.driver1.speed;
+            document.getElementById('right-speed').innerText = data.driver2.speed;
+            
+            updateERS('left', data.driver1.ers, data.driver1.deploying);
+            updateERS('right', data.driver2.ers, data.driver2.deploying);
+
+            updateTabs('left', data.driver1.drs, data.driver1.deploying);
+            updateTabs('right', data.driver2.drs, data.driver2.deploying);
+
+            // Gap Math
+            const gapEl = document.getElementById('live-gap');
+            gapEl.innerHTML = `+${parseFloat(data.gap).toFixed(3)}<span class="small-s">s</span>`;
+            
+            if (data.gap < previousGap) {
+                gapEl.classList.add('gap-decreasing'); gapEl.classList.remove('gap-increasing');
+            } else if (data.gap > previousGap) {
+                gapEl.classList.add('gap-increasing'); gapEl.classList.remove('gap-decreasing');
+            }
+            previousGap = data.gap;
+        }
+
+
+        // ==========================================
+        // FIREBASE INITIALIZATION & LISTENERS
         // ==========================================
         const firebaseConfig = {
             apiKey: "AIzaSyCCiZwdBkZBZubr8oVsG8hkNE-x2iq3HJ0",
@@ -227,25 +464,36 @@
             databaseURL: "https://f1-lads-team-radio-589fc-default-rtdb.asia-southeast1.firebasedatabase.app/",
             projectId: "f1-lads-team-radio-589fc"
         };
-        firebase.initializeApp(firebaseConfig);
+        if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
         const db = firebase.database();
 
-        let lastSeenTimestamp = null;
-
-        // STEP 1: Quietly check the database ONCE when OBS loads to see what the last timestamp was.
+        // 1. Starting Grid Listener
+        let lastGridTimestamp = null;
         db.ref('startingGrid/timestamp').once('value').then((snapshot) => {
-            lastSeenTimestamp = snapshot.val() || 0;
-
-            // STEP 2: NOW start listening for live updates.
+            lastGridTimestamp = snapshot.val() || 0;
             db.ref('startingGrid').on('value', (liveSnap) => {
                 const gridInfo = liveSnap.val();
-
-                // STEP 3: If the incoming timestamp is strictly newer than the one we saw on load, PLAY IT!
-                if (gridInfo && gridInfo.trigger && gridInfo.timestamp > lastSeenTimestamp) {
-                    lastSeenTimestamp = gridInfo.timestamp; // Update our memory
+                if (gridInfo && gridInfo.trigger && gridInfo.timestamp > lastGridTimestamp) {
+                    lastGridTimestamp = gridInfo.timestamp;
                     buildAndPlayGrid(gridInfo.data, gridInfo.trackName);
                 }
             });
+        });
+
+        // 2. Battle Focus Listener
+        db.ref('battleFocusLive').on('value', (snapshot) => {
+            const bfData = snapshot.val();
+            const battleScene = document.getElementById('battle-scene');
+
+            if (bfData && bfData.show) {
+                // Hide Grid if it's somehow playing
+                gridScene.classList.remove('active'); 
+                
+                populateBattleFocus(bfData);
+                battleScene.classList.add('active');
+            } else {
+                battleScene.classList.remove('active');
+            }
         });
 
     </script>
