@@ -21,15 +21,33 @@
         * { box-sizing: border-box; }
         
         /* STRICT 1920x1080 CANVAS LOCK */
-        body { margin: 0; padding: 0; width: 1920px; height: 1080px; overflow: hidden; background-color: transparent; color: #fff; font-family: var(--font-main); }
-        .broadcast-canvas { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; overflow: hidden; background-color: var(--bg-base); opacity: 0; transition: opacity 0.5s ease; }
+        body {
+            margin: 0; padding: 0; 
+            width: 1920px; height: 1080px; /* RIGID LOCK */
+            overflow: hidden;
+            background-color: transparent; 
+            color: #fff; font-family: var(--font-main);
+        }
+
+        .broadcast-canvas {
+            position: absolute; 
+            top: 0; left: 0;
+            width: 1920px; height: 1080px; /* RIGID LOCK */
+            overflow: hidden;
+            background-color: var(--bg-base);
+            opacity: 0; 
+        }
+
+        .grid-section {
+            width: 1920px; height: 1080px; /* RIGID LOCK */
+            position: relative; flex-shrink: 0; overflow: hidden; 
+        }
 
         .texture-dots { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.15; background-image: radial-gradient(#ffffff 1px, transparent 1px); background-size: 20px 20px; }
         .texture-scanlines { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.05; background: repeating-linear-gradient(45deg, transparent, transparent 10px, #ffffff 10px, #ffffff 20px); }
 
         #scroller-track { position: absolute; top: 0; left: 0; width: 1920px; display: flex; flex-direction: column; z-index: 5; }
-        .grid-section { width: 1920px; height: 1080px; position: relative; flex-shrink: 0; overflow: hidden; }
-
+        
         @keyframes zoomOutCenter { 0% { transform: translate(-50%, -50%) scale(4.6); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
         @keyframes zoomOutSpine { 0% { transform: translateX(-50%) scale(4.6); opacity: 0; } 100% { transform: translateX(-50%) scale(1); opacity: 1; } }
         @keyframes cityRevealLeftToRight { 0% { clip-path: inset(0 100% 0 0); opacity: 0; } 40% { opacity: 1; } 100% { clip-path: inset(0 -20% 0 -20%); opacity: 1; } }
