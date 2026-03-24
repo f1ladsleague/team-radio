@@ -219,7 +219,7 @@
         }
 
         // ==========================================
-        // FIREBASE LISTENERS
+        // FIREBASE LISTENERS (Bulletproof Sync)
         // ==========================================
         const firebaseConfig = {
             apiKey: "AIzaSyCCiZwdBkZBZubr8oVsG8hkNE-x2iq3HJ0",
@@ -229,22 +229,23 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-        
-        // NEW FIX: Simply ignore the very first load to prevent the Ghost Trigger
-        let isFirstLoad = true;
 
-        db.ref('startingGrid').on('value', (snapshot) => {
-            const gridInfo = snapshot.val();
-            
-            if (isFirstLoad) {
-                isFirstLoad = false; // Flag that we've handled the startup
-                return; // Stop here, do not play the animation
-            }
+        let lastSeenTimestamp = null;
 
-            // If it's a brand new trigger from the remote or game, play it!
-            if (gridInfo && gridInfo.trigger) {
-                buildAndPlayGrid(gridInfo.data, gridInfo.trackName);
-            }
+        // STEP 1: Quietly check the database ONCE when OBS loads to see what the last timestamp was.
+        db.ref('startingGrid/timestamp').once('value').then((snapshot) => {
+            lastSeenTimestamp = snapshot.val() || 0;
+
+            // STEP 2: NOW start listening for live updates.
+            db.ref('startingGrid').on('value', (liveSnap) => {
+                const gridInfo = liveSnap.val();
+
+                // STEP 3: If the incoming timestamp is strictly newer than the one we saw on load, PLAY IT!
+                if (gridInfo && gridInfo.trigger && gridInfo.timestamp > lastSeenTimestamp) {
+                    lastSeenTimestamp = gridInfo.timestamp; // Update our memory
+                    buildAndPlayGrid(gridInfo.data, gridInfo.trackName);
+                }
+            });
         });
 
     </script>
