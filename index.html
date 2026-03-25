@@ -283,7 +283,7 @@
                 setTimeout(() => {
                     const teamVoice = new Audio(teamRadioSounds[currentTeam]);
                     teamVoice.play().catch(e => console.error("Voice blocked:", e));
-                }, 800); // <-- Adjust this number (in milliseconds) to perfectly time the voice after the beep
+                }, 500); // <-- Adjust this number (in milliseconds) to perfectly time the voice after the beep
             }
 
             const liveBanner = document.getElementById('live-banner');
