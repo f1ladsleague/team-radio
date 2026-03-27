@@ -72,13 +72,13 @@
         .driver-check-btn { display: none; background: #111; color: #aaa; border: 1px solid #444; padding: 10px; border-radius: 4px; font-family: 'Share Tech Mono', monospace; cursor: pointer; width: 100%; font-weight: bold; }
         .driver-check-btn.active-check { background: #1a0000; color: #ff4444; border-color: #ff0000; }
 
-        /* DEBUG MODE: Visible Audio Engine */
-        #vdo-engine { width: 300px; height: 200px; position: fixed; top: 10px; right: 10px; border: 2px solid #ff0000; background: #000; z-index: 9999; }
+        /* Invisible Audio Engine */
+        #vdo-engine { width: 10px; height: 10px; opacity: 0.01; border: none; position: absolute; top: 0; left: 0; pointer-events: none; }
     </style>
 </head>
 <body>
 
-    <iframe id="vdo-engine" allow="camera;microphone;autoplay"></iframe>
+    <iframe id="vdo-engine" allow="microphone;autoplay"></iframe>
 
     <div class="brand-header">
         <img class="brand-logo" src="https://raw.githubusercontent.com/f1ladsleague/sidebetting/9e649c454badbe13d3d17c100f0f535a7555a058/Logo.png" alt="F1 Lads Logo">
@@ -149,7 +149,6 @@
         let activeDriverFile = null, safetyTimer = null, raceState = "PRE-RACE", currentLap = 0, lastTransmittedLap = -1;
         let precisionTimerInterval = null, postRaceMessageUsed = false, lineIsBusy = false;
 
-        // FIXED: Using the raw github user content URL for the audio file
         const connectingSoundUrl = 'https://raw.githubusercontent.com/f1ladsleague/team-radio/de150eabe38072f05f2facf5a269dbfeaa56dcbe/F1-Radio-System/radio_beep.mp3';
         const teamRadioSounds = {
             'Mercedes': 'https://raw.githubusercontent.com/f1ladsleague/team-radio/main/F1-Radio-System/MercedesTeamRadio.mp3',
@@ -170,6 +169,7 @@
         function setMicState(unmute) {
             const vdoFrame = document.getElementById('vdo-engine');
             if(vdoFrame && vdoFrame.contentWindow) {
+                // Sending the boolean command directly controls the mic
                 vdoFrame.contentWindow.postMessage({"mic": unmute}, "*");
                 console.log("VDO Command Sent: Mic", unmute);
             }
@@ -190,9 +190,9 @@
                 try { await navigator.mediaDevices.getUserMedia({ audio: true }); } 
                 catch(e) { alert("Microphone access is required!"); return; }
 
-                // Removed video stream requirement (&webcam=0) to force audio only
+                // ADDED &api AND &novideo: This enables JS control of the mic and prevents the camera prompt!
                 const safeTeamName = currentTeam.replace(/\s+/g, '');
-                const vdoUrl = `https://vdo.ninja/?room=F1Lads_Global_Radio_2026&push=${safeTeamName}&autostart&webcam=0&mic=0`;
+                const vdoUrl = `https://vdo.ninja/?room=F1Lads_Global_Radio_2026&push=${safeTeamName}&autostart&novideo&mic=0&api=f1lads&cleanoutput`;
                 document.getElementById('vdo-engine').src = vdoUrl;
 
                 document.getElementById('auth-section').style.display = 'none';
