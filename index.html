@@ -169,9 +169,9 @@
         function setMicState(unmute) {
             const vdoFrame = document.getElementById('vdo-engine');
             if(vdoFrame && vdoFrame.contentWindow) {
-                // VDO.Ninja requires the "target" key, not "api"
+                // We securely target the f1lads_api id and command the mic to be true (on) or false (off)
                 vdoFrame.contentWindow.postMessage({
-                    "target": "f1lads_api",  // <--- THIS WAS THE BUG
+                    "target": "f1lads_api", 
                     "action": "mic", 
                     "value": unmute 
                 }, "*");
@@ -194,10 +194,18 @@
                 try { await navigator.mediaDevices.getUserMedia({ audio: true }); } 
                 catch(e) { alert("Microphone access is required!"); return; }
 
-                // 🟢 FIX: URL updated to &muted=true (loads mic, but silences it) and &api=f1lads_api
                 const safeTeamName = currentTeam.replace(/\s+/g, '');
                 const vdoUrl = `https://vdo.ninja/?room=F1Lads_Global_Radio_2026&push=${safeTeamName}&autostart&novideo&muted=true&api=f1lads_api&cleanoutput`;
-                document.getElementById('vdo-engine').src = vdoUrl;
+                
+                const vdoFrame = document.getElementById('vdo-engine');
+                vdoFrame.src = vdoUrl;
+
+                // 🟢 FIX: Force the mic to mute as soon as the engine connects
+                vdoFrame.onload = () => {
+                    console.log("[SYS] VDO Engine Loaded. Forcing Mic to Standby.");
+                    // 1000ms buffer ensures VDO is fully ready to catch the postMessage
+                    setTimeout(() => setMicState(false), 1000); 
+                };
 
                 document.getElementById('auth-section').style.display = 'none';
                 document.getElementById('team-grid').style.display = 'none';
