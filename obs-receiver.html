@@ -49,6 +49,8 @@
         const db = firebase.database();
 
         const GITHUB_BASE_URL = "https://raw.githubusercontent.com/f1ladsleague/team-radio/main/F1-Radio-System/";
+        const beepUrl = "https://raw.githubusercontent.com/f1ladsleague/team-radio/de150eabe38072f05f2facf5a269dbfeaa56dcbe/F1-Radio-System/radio_beep.mp3";
+        
         const stingFiles = {
             "Mercedes": "MercedesTeamRadio.mp3",
             "Red Bull": "RedBullTeamRadio.mp3",
@@ -68,9 +70,16 @@
                 box.innerText = `[ RX ] RECEIVING: ${actualTeam}`;
                 box.classList.add('busy');
 
+                // 1. Play the Radio Beep immediately
+                const beepAudio = new Audio(beepUrl);
+                beepAudio.play().catch(e => console.error("Beep block:", e));
+
+                // 2. Play the Team Intro MP3 with a 500ms delay to match the driver's UI
                 if (stingFiles[actualTeam]) {
-                    const stingAudio = new Audio(GITHUB_BASE_URL + stingFiles[actualTeam]);
-                    stingAudio.play().catch(e => console.error("Sting block:", e));
+                    setTimeout(() => {
+                        const stingAudio = new Audio(GITHUB_BASE_URL + stingFiles[actualTeam]);
+                        stingAudio.play().catch(e => console.error("Sting block:", e));
+                    }, 500);
                 }
             } else {
                 box.innerText = `[ SYS ] SECURE CONNECTION ESTABLISHED`;
