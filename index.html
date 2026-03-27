@@ -169,12 +169,8 @@
         function setMicState(unmute) {
             const vdoFrame = document.getElementById('vdo-engine');
             if(vdoFrame && vdoFrame.contentWindow) {
-                // We securely target the f1lads_api id and command the mic to be true (on) or false (off)
-                vdoFrame.contentWindow.postMessage({
-                    "target": "f1lads_api", 
-                    "action": "mic", 
-                    "value": unmute 
-                }, "*");
+                // This toggles the local mic inside the iframe directly
+                vdoFrame.contentWindow.postMessage({ "mic": unmute }, "*");
                 console.log("Mic LIVE:", unmute);
             }
         }
@@ -195,7 +191,7 @@
                 catch(e) { alert("Microphone access is required!"); return; }
 
                 const safeTeamName = currentTeam.replace(/\s+/g, '');
-                const vdoUrl = `https://vdo.ninja/?room=F1Lads_Global_Radio_2026&push=${safeTeamName}&autostart&novideo&muted=true&api=f1lads_api&cleanoutput`;
+                const vdoUrl = `https://vdo.ninja/?room=F1Lads_Global_Radio_2026&push=${safeTeamName}&autostart&novideo&muted=true&cleanoutput`;
                 
                 const vdoFrame = document.getElementById('vdo-engine');
                 vdoFrame.src = vdoUrl;
