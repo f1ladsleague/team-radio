@@ -200,7 +200,26 @@
             }
         });
 
-        const peer = new Peer(); 
+        // 1. WebRTC Connection configured to bypass International Firewalls
+        const peer = new Peer({
+            config: {
+                'iceServers': [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    {
+                        urls: "turn:openrelay.metered.ca:80",
+                        username: "openrelayproject",
+                        credential: "openrelayproject"
+                    },
+                    {
+                        urls: "turn:openrelay.metered.ca:443",
+                        username: "openrelayproject",
+                        credential: "openrelayproject"
+                    }
+                ]
+            }
+        }); 
+        
         let localMicStream = null;
         let activeCalls = []; 
         let lineIsBusy = false;
@@ -209,7 +228,7 @@
         let activeDriverFile = null, safetyTimer = null, raceState = "PRE-RACE", currentLap = 0, lastTransmittedLap = -1;
         
         let precisionTimerInterval = null;
-        let postRaceMessageUsed = false; // NEW FLAG FOR POST-RACE
+        let postRaceMessageUsed = false; 
 
         // Map exact team names to the raw MP3 files
         const teamRadioSounds = {
@@ -272,18 +291,16 @@
         }
 
         function startPrecisionCountdown(totalDurationMs, buttonEl) {
-            // 1. Play the radio connecting beep/static immediately
             if (connectingSoundUrl) {
                 const beepSound = new Audio(connectingSoundUrl);
                 beepSound.play().catch(e => console.error("Beep blocked:", e));
             }
 
-            // 2. Delay the Team Radio voice line (e.g., 800ms delay)
             if (teamRadioSounds[currentTeam]) {
                 setTimeout(() => {
                     const teamVoice = new Audio(teamRadioSounds[currentTeam]);
                     teamVoice.play().catch(e => console.error("Voice blocked:", e));
-                }, 500); // <-- Adjust this number (in milliseconds) to perfectly time the voice after the beep
+                }, 500); 
             }
 
             const liveBanner = document.getElementById('live-banner');
@@ -404,7 +421,6 @@
             if (!activeDriverFile) {
                 if (lineIsBusy) return; 
                 
-                // NEW GUARD CHECKS (Allows 1 Post-Race message)
                 if (raceState === "PRE-RACE") return;
                 if (raceState === "RACING" && (currentLap < 3 || currentLap === lastTransmittedLap)) return;
                 if (raceState === "POST-RACE" && postRaceMessageUsed) return;
@@ -457,12 +473,10 @@
                 checkBtns.forEach(btn => btn.style.display = "block");
                 cards.forEach(c => c.classList.add('disabled')); 
                 
-            // --- NEW QUALIFYING LOGIC ---
             } else if (raceState === "QUALIFYING") {
-                updateTelemetry("[ QUAL : LOCKED UNTIL RACE ]", "#F47600"); // Orange lock
+                updateTelemetry("[ QUAL : LOCKED UNTIL RACE ]", "#F47600"); 
                 checkBtns.forEach(btn => btn.style.display = "none");
                 cards.forEach(c => c.classList.add('disabled'));
-            // ----------------------------
                 
             } else if (raceState === "POST-RACE") {
                 checkBtns.forEach(btn => btn.style.display = "none");
@@ -506,9 +520,7 @@
                 const newLap = data.lap || 0;
                 const newState = data.state || "PRE-RACE";
 
-                // If lap or state has changed
                 if (newLap !== currentLap || newState !== raceState) {
-                    // Reset trackers if going backwards in laps or back to lobby
                     if (newLap < currentLap || newState === "PRE-RACE") {
                         lastTransmittedLap = -1;
                         postRaceMessageUsed = false;
