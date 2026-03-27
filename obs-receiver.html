@@ -61,12 +61,22 @@
         const urlParams = new URLSearchParams(window.location.search);
         const TOWER_ID = urlParams.get('tower') || 'f1lads-tower-obs';
 
-        // 4. WebRTC Connection with STUN Firewalls Bypass
+        // 4. WebRTC Connection with STUN + TURN Firewalls Bypass
         const peer = new Peer(TOWER_ID, {
             config: {
                 'iceServers': [
-                    { url: 'stun:stun.l.google.com:19302' },
-                    { url: 'stun:stun1.l.google.com:19302' }
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    {
+                        urls: "turn:openrelay.metered.ca:80",
+                        username: "openrelayproject",
+                        credential: "openrelayproject"
+                    },
+                    {
+                        urls: "turn:openrelay.metered.ca:443",
+                        username: "openrelayproject",
+                        credential: "openrelayproject"
+                    }
                 ]
             }
         });
