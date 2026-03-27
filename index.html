@@ -178,7 +178,6 @@
         async function authenticate() {
             if (document.getElementById('team-pass').value === currentPass) {
                 
-                // 🟢 Request hardware microphone access permanently for this session
                 try { 
                     globalAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true }); 
                 } catch(e) { 
@@ -256,26 +255,36 @@
                     countdownEl.style.color = "#F47600";
                 } else {
                     
-                    // 🟢 START RECORDING AT 1.5s
+                    // 🟢 1. DYNAMIC MIME TYPE DETECTION FOR iOS
                     if (!recordingStarted) {
                         recordingStarted = true;
                         audioChunks = [];
-                        mediaRecorder = new MediaRecorder(globalAudioStream);
+                        
+                        let safeMime = '';
+                        if (MediaRecorder.isTypeSupported('audio/webm')) safeMime = 'audio/webm'; // Chrome/Android
+                        else if (MediaRecorder.isTypeSupported('audio/mp4')) safeMime = 'audio/mp4'; // iOS Safari
+                        
+                        const options = safeMime ? { mimeType: safeMime } : {};
+                        mediaRecorder = new MediaRecorder(globalAudioStream, options);
+
                         mediaRecorder.ondataavailable = event => {
-                            if (event.data.size > 0) audioChunks.push(event.data);
+                            if (event.data && event.data.size > 0) audioChunks.push(event.data);
                         };
                         
-                        // When recording stops, convert to Base64 Text and push to Firebase!
                         mediaRecorder.onstop = () => {
-                            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                            // Use the hardware's native format so we don't corrupt the file header
+                            const finalMime = mediaRecorder.mimeType || safeMime || 'audio/webm';
+                            const audioBlob = new Blob(audioChunks, { type: finalMime });
                             const reader = new FileReader();
                             reader.readAsDataURL(audioBlob); 
                             reader.onloadend = () => {
                                 const base64String = reader.result;
-                                db.ref('radioState').update({
-                                    audioPayload: base64String
-                                });
-                                console.log("[SYS] Audio Payload successfully beamed to Pitwall.");
+                                db.ref('radioState').update({ audioPayload: base64String });
+                                console.log(`[SYS] Payload beamed securely as ${finalMime}`);
+                                
+                                // 🟢 2. DESTROY RECORDER TO PREVENT iOS CRASHES ON SUBSEQUENT PRESSES
+                                mediaRecorder = null;
+                                audioChunks = [];
                             };
                         };
                         
@@ -291,8 +300,10 @@
 
                     if (remainingLive <= 0) {
                         clearInterval(precisionTimerInterval);
-                        // 🟢 STOP RECORDING AT 6.5s
+                        
+                        // 🟢 3. FORCE iOS TO FLUSH ITS BUFFER BEFORE STOPPING
                         if(mediaRecorder && mediaRecorder.state !== "inactive") {
+                            try { mediaRecorder.requestData(); } catch(e) {} // Fixes the 2-second cutoff
                             mediaRecorder.stop();
                         }
                     }
@@ -308,19 +319,16 @@
             btn.classList.add('active-check');
             document.querySelectorAll('.driver-check-btn').forEach(b => b.style.pointerEvents = "none");
 
-            // 1. Instantly lock the line for everyone else
             db.ref('radioState').set({ 
                 active: true, 
                 team: currentTeam, 
                 driver: displayName + " (TEST)",
-                audioPayload: null, // Empty for now
+                audioPayload: null,
                 timestamp: Date.now() 
             });
 
-            // 2. Start the local recording process
             startPrecisionCountdown(6500, displayName + " (TEST)");
 
-            // 3. Keep the line locked for 12 seconds to give OBS time to download and play the file
             setTimeout(() => {
                 db.ref('radioState').update({ active: false, audioPayload: null });
                 document.getElementById('live-banner').style.display = 'none';
@@ -346,7 +354,6 @@
                 if (raceState === "POST-RACE") postRaceMessageUsed = true;
                 else lastTransmittedLap = currentLap; 
                 
-                // 1. Instantly lock the line
                 db.ref('radioState').set({ 
                     active: true, 
                     team: currentTeam, 
@@ -355,10 +362,8 @@
                     timestamp: Date.now()
                 });
 
-                // 2. Record locally
                 startPrecisionCountdown(6500, displayName);
 
-                // 3. Unlock line after playback buffer
                 safetyTimer = setTimeout(() => { 
                     if(activeDriverFile) toggleRadio(activeDriverFile, displayName); 
                 }, 12000); 
@@ -419,7 +424,6 @@
 
         db.ref('radioState').on('value', (snapshot) => {
             const radio = snapshot.val();
-            // If another team is active, grey out our buttons so we don't overlap them
             if (radio && radio.active && radio.team !== currentTeam) {
                 lineIsBusy = true;
                 updateTelemetry(`[ LINE BUSY : ${radio.team.toUpperCase()} ]`, "#ff4444");
