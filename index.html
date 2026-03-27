@@ -191,7 +191,8 @@
                 catch(e) { alert("Microphone access is required!"); return; }
 
                 const safeTeamName = currentTeam.replace(/\s+/g, '');
-                const vdoUrl = `https://vdo.ninja/?room=F1Lads_Global_Radio_2026&push=${safeTeamName}&autostart&novideo&muted=true&cleanoutput`;
+                const vdoUrl = `https://vdo.ninja/?room=F1Lads_Global_Radio_2026&push=${safeTeamName}&autostart&novideo&cleanoutput`;
+                document.getElementById('vdo-engine').src = vdoUrl;
                 
                 const vdoFrame = document.getElementById('vdo-engine');
                 vdoFrame.src = vdoUrl;
