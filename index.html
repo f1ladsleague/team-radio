@@ -165,16 +165,6 @@
             }
         });
 
-        // 🟢 FIX: Secure API Payload to Toggle the VDO.Ninja Mic
-        function setMicState(unmute) {
-            const vdoFrame = document.getElementById('vdo-engine');
-            if(vdoFrame && vdoFrame.contentWindow) {
-                // This toggles the local mic inside the iframe directly
-                vdoFrame.contentWindow.postMessage({ "mic": unmute }, "*");
-                console.log("Mic LIVE:", unmute);
-            }
-        }
-
         function selectTeam(name, hex, pass, drivers, suffix, logoFile) {
             if(activeDriverFile) return; 
             currentTeam = name; currentHex = hex; currentPass = pass; 
@@ -191,18 +181,10 @@
                 catch(e) { alert("Microphone access is required!"); return; }
 
                 const safeTeamName = currentTeam.replace(/\s+/g, '');
+                // 🟢 FIX: Removed muted=true. The mic connects fully hot and stays that way.
                 const vdoUrl = `https://vdo.ninja/?room=F1Lads_Global_Radio_2026&push=${safeTeamName}&autostart&novideo&cleanoutput`;
-                document.getElementById('vdo-engine').src = vdoUrl;
                 
-                const vdoFrame = document.getElementById('vdo-engine');
-                vdoFrame.src = vdoUrl;
-
-                // 🟢 FIX: Force the mic to mute as soon as the engine connects
-                vdoFrame.onload = () => {
-                    console.log("[SYS] VDO Engine Loaded. Forcing Mic to Standby.");
-                    // 1000ms buffer ensures VDO is fully ready to catch the postMessage
-                    setTimeout(() => setMicState(false), 1000); 
-                };
+                document.getElementById('vdo-engine').src = vdoUrl;
 
                 document.getElementById('auth-section').style.display = 'none';
                 document.getElementById('team-grid').style.display = 'none';
@@ -258,7 +240,6 @@
             const introDurationMs = 1500; 
             const introEndTime = now + introDurationMs;
             const totalEndTime = now + totalDurationMs;
-            let micIsHot = false;
             
             liveBanner.style.display = 'flex'; 
 
@@ -274,11 +255,7 @@
                     countdownEl.innerText = (remainingIntro / 1000).toFixed(3).padStart(6, '0');
                     countdownEl.style.color = "#F47600";
                 } else {
-                    if (!micIsHot) {
-                        setMicState(true); 
-                        micIsHot = true;
-                    }
-                    
+                    // Receiver unmuted via Firebase automatically. 
                     const remainingLive = Math.max(0, totalEndTime - currentTime);
                     statusTextEl.innerText = "TX LIVE";
                     statusTextEl.style.color = "#ff4444";
@@ -306,7 +283,6 @@
 
             setTimeout(() => {
                 clearInterval(precisionTimerInterval);
-                setMicState(false); 
                 db.ref('radioState').update({ active: false });
                 
                 document.getElementById('live-banner').style.display = 'none';
@@ -346,7 +322,6 @@
                 activeDriverFile = null;
                 card.classList.remove('active');
                 
-                setMicState(false); 
                 db.ref('radioState').update({ active: false });
                 evaluateTelemetryState();
             }
