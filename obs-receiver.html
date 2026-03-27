@@ -16,8 +16,8 @@
             font-size: 24px; font-weight: bold; cursor: pointer; z-index: 9999; text-align: center;
         }
         
-        /* The invisible VDO Ninja audio pipe */
-        #vdo-rx { width: 1px; height: 1px; opacity: 0; border: none; position: absolute; top: -100px; }
+        /* The invisible VDO Ninja audio pipe. Made slightly visible (10px) to prevent browsers from throttling it */
+        #vdo-rx { width: 10px; height: 10px; opacity: 0.01; border: none; position: absolute; top: 0; left: 0; pointer-events: none;}
     </style>
 </head>
 <body>
@@ -29,12 +29,13 @@
     <iframe id="vdo-rx" allow="autoplay;camera;microphone"></iframe>
 
     <script>
+        // THIS FUNCTION BYPASSES CHROME'S AUDIO BLOCKER
         function unlockAudio() {
             const silentAudio = new Audio();
             silentAudio.play().catch(e => {}); 
             document.getElementById('unlock-overlay').style.display = 'none';
             
-            // Connect to the VDO Ninja Room upon unlock
+            // Connect to the VDO Ninja Room upon unlock to receive the live voice
             document.getElementById('vdo-rx').src = "https://vdo.ninja/?room=F1Lads_Global_Radio_2026&view&autoplay&cleanoutput";
             document.getElementById('box').innerText = `[ SYS ] SECURE CONNECTION ESTABLISHED`; 
         }
