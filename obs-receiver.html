@@ -1,24 +1,19 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Pitwall Receiver (VDO.Ninja Edition)</title>
+    <title>Pitwall Receiver (Firebase Base64 Engine)</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <style>
         body { background: transparent; color: #00D7B6; font-family: monospace; padding: 10px; font-weight: bold; font-size: 14px; }
         #box { background: rgba(0,0,0,0.85); padding: 12px; border-radius: 4px; border-left: 5px solid #00D7B6; display: inline-block; min-width: 250px; text-transform: uppercase; letter-spacing: 1px; }
         .busy { border-left-color: #ff4444 !important; color: #ff4444 !important; }
-        
-        /* Hidden Audio Engine */
-        #vdo-rx { width: 10px; height: 10px; opacity: 0.01; border: none; position: absolute; top: 0; left: 0; pointer-events: none; }
     </style>
 </head>
 <body>
 
-    <div id="box">[ SYS ] SECURE CONNECTION ESTABLISHED</div>
+    <div id="box">[ SYS ] WAITING FOR ENCRYPTED COMMS...</div>
     
-    <iframe id="vdo-rx" allow="microphone;autoplay" src="https://vdo.ninja/?room=F1Lads_Global_Radio_2026&scene&autostart&novideo&cleanoutput"></iframe>
-
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyCCiZwdBkZBZubr8oVsG8hkNE-x2iq3HJ0",
@@ -41,47 +36,51 @@
         };
 
         const box = document.getElementById('box');
-        const vdoRx = document.getElementById('vdo-rx');
+        let lastPlayedTimestamp = 0; // Prevents re-playing old messages if OBS refreshes
 
-        // 🟢 FIX: Ensure the OBS iframe starts muted.
-        vdoRx.onload = () => {
-             console.log("VDO Loaded. Muting local receiver feed.");
-             setTimeout(() => vdoRx.contentWindow.postMessage({ volume: 0 }, "*"), 2000);
-        };
-
-        // Listen for Firebase triggers from the Drivers
+        // Listen for the completed audio package from Firebase
         db.ref('radioState').on('value', (snapshot) => {
             const data = snapshot.val();
             
-            if (data && data.active) {
+            // Only trigger playback when the audioPayload text finally arrives
+            if (data && data.active && data.audioPayload && data.timestamp > lastPlayedTimestamp) {
+                lastPlayedTimestamp = data.timestamp; // Mark as played
+                
                 const actualTeam = data.team ? data.team : "UNKNOWN"; 
                 box.innerText = `[ RX ] RECEIVING: ${actualTeam}`;
                 box.classList.add('busy');
 
-                // 1. Play the Radio Beep immediately
+                // 1. Play the Radio Beep
                 const beepAudio = new Audio(beepUrl);
                 beepAudio.play().catch(e => console.error("Beep block:", e));
 
-                // 2. Play the Team Intro MP3 with a 500ms delay to match the driver's UI
+                // 2. Play the Team Sting (500ms delay)
                 if (stingFiles[actualTeam]) {
                     setTimeout(() => {
                         const stingAudio = new Audio(GITHUB_BASE_URL + stingFiles[actualTeam]);
                         stingAudio.play().catch(e => console.error("Sting block:", e));
                         
-                        // 🟢 UNMUTE THE OBS IFRAME (Volume 1.0 = 100%)
-                        if(vdoRx.contentWindow) {
-                            vdoRx.contentWindow.postMessage({ volume: 1.0 }, "*");
-                        }
+                        // 3. Play the Base64 Voice Recording (1500ms delay to let sting finish)
+                        setTimeout(() => {
+                            // Convert the Base64 text back into physical audio and play it!
+                            const constructorVoice = new Audio(data.audioPayload);
+                            constructorVoice.play()
+                                .then(() => console.log("Voice successfully decoded and played."))
+                                .catch(e => console.error("Voice block:", e));
+                                
+                            // 4. Wait for the 5-second voice note to finish, then clear UI
+                            setTimeout(() => {
+                                box.innerText = `[ SYS ] WAITING FOR ENCRYPTED COMMS...`;
+                                box.classList.remove('busy');
+                            }, 5000);
+
+                        }, 1000); // 1-second gap after the sting starts before the voice drops
                     }, 500);
                 }
-            } else {
-                box.innerText = `[ SYS ] SECURE CONNECTION ESTABLISHED`;
+            } 
+            else if (data && !data.active) {
+                box.innerText = `[ SYS ] WAITING FOR ENCRYPTED COMMS...`;
                 box.classList.remove('busy');
-                
-                // 🛑 MUTE THE OBS IFRAME (Volume 0 = 0%)
-                if(vdoRx.contentWindow) {
-                    vdoRx.contentWindow.postMessage({ volume: 0 }, "*");
-                }
             }
         });
     </script>
