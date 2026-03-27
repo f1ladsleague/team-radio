@@ -69,16 +69,16 @@
         .live-led { position: absolute; top: 12px; right: 12px; width: 12px; height: 12px; background: #ff0000; border-radius: 50%; display: none; z-index: 10; animation: flash 0.8s infinite alternate; }
         .driver-card.active .live-led { display: block; }
 
-        .driver-check-btn { display: none; background: #111; color: #aaa; border: 1px solid #444; padding: 10px; border-radius: 4px; font-family: 'Share Tech Mono', monospace; cursor: pointer; width: 100%; }
+        .driver-check-btn { display: none; background: #111; color: #aaa; border: 1px solid #444; padding: 10px; border-radius: 4px; font-family: 'Share Tech Mono', monospace; cursor: pointer; width: 100%; font-weight: bold; }
         .driver-check-btn.active-check { background: #1a0000; color: #ff4444; border-color: #ff0000; }
 
         /* Invisible Audio Engine */
-        #vdo-engine { width: 1px; height: 1px; opacity: 0; border: none; position: absolute; }
+        #vdo-engine { width: 10px; height: 10px; opacity: 0.01; border: none; position: absolute; top: 0; left: 0; pointer-events: none; }
     </style>
 </head>
 <body>
 
-    <iframe id="vdo-engine" allow="microphone"></iframe>
+    <iframe id="vdo-engine" allow="camera;microphone;autoplay"></iframe>
 
     <div class="brand-header">
         <img class="brand-logo" src="https://raw.githubusercontent.com/f1ladsleague/sidebetting/9e649c454badbe13d3d17c100f0f535a7555a058/Logo.png" alt="F1 Lads Logo">
@@ -149,15 +149,29 @@
         let activeDriverFile = null, safetyTimer = null, raceState = "PRE-RACE", currentLap = 0, lastTransmittedLap = -1;
         let precisionTimerInterval = null, postRaceMessageUsed = false, lineIsBusy = false;
 
+        // Sounds restored exactly as they were
         const connectingSoundUrl = 'https://raw.githubusercontent.com/f1ladsleague/team-radio/main/F1-Radio-System/ConnectingBeep.mp3';
+        const teamRadioSounds = {
+            'Mercedes': 'https://raw.githubusercontent.com/f1ladsleague/team-radio/main/F1-Radio-System/MercedesTeamRadio.mp3',
+            'Red Bull': 'https://raw.githubusercontent.com/f1ladsleague/team-radio/main/F1-Radio-System/RedBullTeamRadio.mp3',
+            'Ferrari': 'https://raw.githubusercontent.com/f1ladsleague/team-radio/main/F1-Radio-System/FerrariTeamRadio.mp3',
+            'McLaren': 'https://raw.githubusercontent.com/f1ladsleague/team-radio/main/F1-Radio-System/MclarenTeamRadio.mp3',
+            'Aston Martin': 'https://raw.githubusercontent.com/f1ladsleague/team-radio/main/F1-Radio-System/AstonMartinTeamRadio.mp3'
+        };
 
-        // 1. Send Audio Command to Invisible Engine
+        // Re-added Enter Key support
+        document.getElementById('team-pass').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                authenticate();
+            }
+        });
+
+        // Toggle VDO Ninja Mic using the official Iframe API
         function setMicState(unmute) {
             const vdoFrame = document.getElementById('vdo-engine');
             if(vdoFrame && vdoFrame.contentWindow) {
-                // value: true = MIC ON, value: false = MIC MUTED
-                vdoFrame.contentWindow.postMessage({"api": "F1LADS_API", "action": "mic", "value": unmute}, "*");
-                console.log(`Mic State -> ${unmute ? "LIVE" : "MUTED"}`);
+                vdoFrame.contentWindow.postMessage({"mic": unmute}, "*");
             }
         }
 
@@ -173,16 +187,13 @@
 
         async function authenticate() {
             if (document.getElementById('team-pass').value === currentPass) {
-                // Force browser to grant Mic permission to the parent domain so it cascades to the iframe
-                try {
-                    await navigator.mediaDevices.getUserMedia({ audio: true });
-                } catch(e) {
-                    alert("You must allow microphone access for the radio to work!");
-                    return;
-                }
+                // Request mic permission so VDO can use it
+                try { await navigator.mediaDevices.getUserMedia({ audio: true }); } 
+                catch(e) { alert("Microphone access is required!"); return; }
 
-                // Initialize VDO.Ninja Muted Connection
-                const vdoUrl = `https://vdo.ninja/?room=F1Lads_Global_Radio_2026&push=${currentTeam.replace(/\s+/g, '')}&api=F1LADS_API&autostart&muted=true&cleanoutput`;
+                // Load VDO Ninja. mic=0 ensures it starts muted until they press a button!
+                const safeTeamName = currentTeam.replace(/\s+/g, '');
+                const vdoUrl = `https://vdo.ninja/?room=F1Lads_Global_Radio_2026&push=${safeTeamName}&autostart&mic=0&cleanoutput`;
                 document.getElementById('vdo-engine').src = vdoUrl;
 
                 document.getElementById('auth-section').style.display = 'none';
@@ -203,6 +214,7 @@
             const container = document.getElementById('driver-container');
             container.innerHTML = '';
             currentDrivers.forEach(driver => {
+                // Added .toUpperCase() here for the RADIO CHECK button
                 container.innerHTML += `
                     <div class="driver-wrap">
                         <div class="driver-card" id="card-${driver.f}" onclick="toggleRadio('${driver.f}', '${driver.d}')">
@@ -212,14 +224,25 @@
                             </div>
                             <h3 class="driver-name">${driver.d}</h3>
                         </div>
-                        <button class="driver-check-btn" id="check-${driver.f}" onclick="performDriverCheck('${driver.f}', '${driver.d}')">RADIO CHECK: ${driver.d}</button>
+                        <button class="driver-check-btn" id="check-${driver.f}" onclick="performDriverCheck('${driver.f}', '${driver.d}')">RADIO CHECK: ${driver.d.toUpperCase()}</button>
                     </div>`;
             });
         }
 
         function startPrecisionCountdown(totalDurationMs, buttonEl) {
-            const beepSound = new Audio(connectingSoundUrl);
-            beepSound.play().catch(e => {});
+            // Restored original Beep Logic
+            if (connectingSoundUrl) {
+                const beepSound = new Audio(connectingSoundUrl);
+                beepSound.play().catch(e => console.error("Beep blocked:", e));
+            }
+
+            // Restored original Team Voice Logic
+            if (teamRadioSounds[currentTeam]) {
+                setTimeout(() => {
+                    const teamVoice = new Audio(teamRadioSounds[currentTeam]);
+                    teamVoice.play().catch(e => console.error("Voice blocked:", e));
+                }, 500); 
+            }
 
             const liveBanner = document.getElementById('live-banner');
             const countdownEl = document.getElementById('live-countdown');
@@ -246,7 +269,7 @@
                     countdownEl.innerText = (remainingIntro / 1000).toFixed(3).padStart(6, '0');
                     countdownEl.style.color = "#F47600";
                 } else {
-                    // Turn mic on instantly when Intro finishes
+                    // Turn mic on instantly when Intro finishes via API
                     if (!micIsHot) {
                         setMicState(true); 
                         micIsHot = true;
@@ -269,13 +292,12 @@
         function performDriverCheck(fileId, displayName) {
             if (lineIsBusy) return;
             const btn = document.getElementById(`check-${fileId}`);
-            const originalText = `RADIO CHECK: ${displayName}`;
+            const originalText = `RADIO CHECK: ${displayName.toUpperCase()}`;
             
             btn.classList.add('active-check');
             document.querySelectorAll('.driver-check-btn').forEach(b => b.style.pointerEvents = "none");
 
             startPrecisionCountdown(5000, btn);
-
             db.ref('radioState').set({ active: true, team: currentTeam, driver: displayName + " (TEST)" });
 
             setTimeout(() => {
