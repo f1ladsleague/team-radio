@@ -16,8 +16,8 @@
             font-size: 24px; font-weight: bold; cursor: pointer; z-index: 9999; text-align: center;
         }
         
-        /* The invisible VDO Ninja audio pipe. Made slightly visible (10px) to prevent browsers from throttling it */
-        #vdo-rx { width: 10px; height: 10px; opacity: 0.01; border: none; position: absolute; top: 0; left: 0; pointer-events: none;}
+        /* DEBUG MODE: Visible Receiver Box */
+        #vdo-rx { width: 300px; height: 200px; position: fixed; bottom: 10px; right: 10px; border: 2px solid #00D7B6; background: #000; z-index: 9999; }
     </style>
 </head>
 <body>
@@ -29,14 +29,13 @@
     <iframe id="vdo-rx" allow="autoplay;camera;microphone"></iframe>
 
     <script>
-        // THIS FUNCTION BYPASSES CHROME'S AUDIO BLOCKER
         function unlockAudio() {
             const silentAudio = new Audio();
             silentAudio.play().catch(e => {}); 
             document.getElementById('unlock-overlay').style.display = 'none';
             
-            // Connect to the VDO Ninja Room upon unlock to receive the live voice
-            document.getElementById('vdo-rx').src = "https://vdo.ninja/?room=F1Lads_Global_Radio_2026&view&autoplay&cleanoutput";
+            // Connect to the VDO Ninja Room. The &scene parameter grabs all audio.
+            document.getElementById('vdo-rx').src = "https://vdo.ninja/?room=F1Lads_Global_Radio_2026&scene&autostart&cleanoutput";
             document.getElementById('box').innerText = `[ SYS ] SECURE CONNECTION ESTABLISHED`; 
         }
 
@@ -69,7 +68,6 @@
                 box.innerText = `[ RX ] RECEIVING: ${actualTeam}`;
                 box.classList.add('busy');
 
-                // Play the Intro MP3 (The live voice flows automatically through the invisible iframe)
                 if (stingFiles[actualTeam]) {
                     const stingAudio = new Audio(GITHUB_BASE_URL + stingFiles[actualTeam]);
                     stingAudio.play().catch(e => console.error("Sting block:", e));
