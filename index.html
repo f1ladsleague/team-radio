@@ -169,9 +169,9 @@
         function setMicState(unmute) {
             const vdoFrame = document.getElementById('vdo-engine');
             if(vdoFrame && vdoFrame.contentWindow) {
-                // We securely target the f1lads_api id and command the mic to be true (on) or false (off)
+                // VDO.Ninja requires the "target" key, not "api"
                 vdoFrame.contentWindow.postMessage({
-                    "api": "f1lads_api", 
+                    "target": "f1lads_api",  // <--- THIS WAS THE BUG
                     "action": "mic", 
                     "value": unmute 
                 }, "*");
