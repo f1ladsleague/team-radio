@@ -41,6 +41,13 @@
         };
 
         const box = document.getElementById('box');
+        const vdoRx = document.getElementById('vdo-rx');
+
+        // 🟢 FIX: Ensure the OBS iframe starts muted.
+        vdoRx.onload = () => {
+             console.log("VDO Loaded. Muting local receiver feed.");
+             setTimeout(() => vdoRx.contentWindow.postMessage({ volume: 0 }, "*"), 2000);
+        };
 
         // Listen for Firebase triggers from the Drivers
         db.ref('radioState').on('value', (snapshot) => {
@@ -60,11 +67,21 @@
                     setTimeout(() => {
                         const stingAudio = new Audio(GITHUB_BASE_URL + stingFiles[actualTeam]);
                         stingAudio.play().catch(e => console.error("Sting block:", e));
+                        
+                        // 🟢 UNMUTE THE OBS IFRAME (Volume 1.0 = 100%)
+                        if(vdoRx.contentWindow) {
+                            vdoRx.contentWindow.postMessage({ volume: 1.0 }, "*");
+                        }
                     }, 500);
                 }
             } else {
                 box.innerText = `[ SYS ] SECURE CONNECTION ESTABLISHED`;
                 box.classList.remove('busy');
+                
+                // 🛑 MUTE THE OBS IFRAME (Volume 0 = 0%)
+                if(vdoRx.contentWindow) {
+                    vdoRx.contentWindow.postMessage({ volume: 0 }, "*");
+                }
             }
         });
     </script>
