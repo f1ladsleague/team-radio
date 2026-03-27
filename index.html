@@ -1,44 +1,141 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Pitwall Receiver (VDO.Ninja Edition)</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1 Lads League | Team Radio</title>
+    
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/f1ladsleague/sidebetting/9e649c454badbe13d3d17c100f0f535a7555a058/favicon.png">
+    
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Share+Tech+Mono&family=Titillium+Web:wght@400;700;900&display=swap" rel="stylesheet">
+    
     <style>
-        body { background: transparent; color: #00D7B6; font-family: monospace; padding: 10px; font-weight: bold; font-size: 14px; }
-        #box { background: rgba(0,0,0,0.85); padding: 12px; border-radius: 4px; border-left: 5px solid #00D7B6; display: inline-block; min-width: 250px; text-transform: uppercase; letter-spacing: 1px; }
-        .busy { border-left-color: #ff4444 !important; color: #ff4444 !important; }
+        :root { --f1-dark: #09090c; --f1-card: #111118; --f1-border: #22222d; --theme-color: #444; }
+        body { font-family: 'Titillium Web', sans-serif; background: var(--f1-dark); color: white; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
         
-        #unlock-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(225, 6, 0, 0.95); color: white;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 24px; font-weight: bold; cursor: pointer; z-index: 9999; text-align: center;
+        .brand-header { margin-bottom: 25px; margin-top: 10px; }
+        .brand-logo { height: 75px; object-fit: contain; }
+
+        .dashboard { width: 100%; max-width: 900px; background: var(--f1-card); padding: 30px; border-radius: 8px; border: 1px solid var(--f1-border); border-top: 4px solid var(--theme-color); box-shadow: 0 10px 40px rgba(0,0,0,0.9); position: relative; }
+        .dashboard.logged-in { max-width: 600px; }
+
+        .dash-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--f1-border); padding-bottom: 15px; margin-bottom: 25px; gap: 15px; }
+        #active-team-logo { display: none; height: 45px; object-fit: contain; }
+        .telemetry-status { font-family: 'Share Tech Mono', monospace; color: #888; font-size: 16px; background: #050508; padding: 8px 15px; border-radius: 4px; border: 1px solid #333; }
+
+        .team-grid { display: flex; flex-wrap: nowrap; gap: 15px; justify-content: space-between; margin-bottom: 25px; }
+        .team-btn { flex: 1; background: #050508; border: 1px solid #333; border-radius: 6px; padding: 15px 10px; cursor: pointer; display: flex; justify-content: center; filter: grayscale(100%) opacity(0.4); }
+        .team-btn.selected { filter: grayscale(0%) opacity(1); border-color: var(--theme-color); background: #1a1a24; }
+        .team-logo { height: 35px; }
+
+        #auth-section { display: none; text-align: center; margin-top: 20px; background: #050508; padding: 30px; border-radius: 6px; border: 1px dashed var(--f1-border); }
+        .auth-controls { display: flex; justify-content: center; gap: 10px; margin-top: 15px; }
+        input[type="password"] { padding: 15px; width: 250px; border-radius: 4px; border: 1px solid var(--theme-color); background: #000; color: white; font-family: 'Share Tech Mono', monospace; font-size: 18px; text-align: center; }
+        .login-btn { padding: 15px 30px; background: var(--theme-color); color: #fff; border: none; border-radius: 4px; font-weight: 900; cursor: pointer; text-transform: uppercase; }
+
+        #driver-section { display: none; text-align: center; }
+
+        #live-banner {
+            display: none; background: #0a0000; border: 1px solid #ff0000; border-left: 5px solid #ff0000;
+            border-radius: 4px; margin-bottom: 25px; padding: 12px 20px; justify-content: space-between; align-items: center;
+            font-family: 'Share Tech Mono', monospace; box-shadow: inset 0 0 20px rgba(255, 0, 0, 0.1);
         }
         
-        /* DEBUG MODE: Visible Receiver Box */
-        #vdo-rx { width: 300px; height: 200px; position: fixed; bottom: 10px; right: 10px; border: 2px solid #00D7B6; background: #000; z-index: 9999; }
+        .banner-left { display: flex; align-items: center; gap: 15px; text-align: left; }
+        .banner-right { text-align: right; }
+        
+        .data-label { color: #888; font-size: 11px; display: block; letter-spacing: 2px; }
+        .data-value { color: #ff4444; font-size: 22px; text-shadow: 0 0 8px rgba(255, 0, 0, 0.6); }
+        #live-countdown { font-size: 32px; color: #fff; }
+
+        .blinking-dot { width: 14px; height: 14px; background-color: #ff0000; border-radius: 50%; box-shadow: 0 0 10px #ff0000; animation: flash 0.8s infinite alternate; }
+        .orange-dot { background-color: #F47600 !important; box-shadow: 0 0 10px #F47600 !important; animation: none !important; }
+        @keyframes flash { from { opacity: 1; } to { opacity: 0.2; } }
+
+        .driver-grid { display: flex; justify-content: center; gap: 30px; }
+        .driver-wrap { display: flex; flex-direction: column; gap: 10px; align-items: center; width: 220px; }
+        
+        .driver-card { background: #050508; border: 1px solid #222; border-radius: 6px; overflow: hidden; width: 100%; cursor: pointer; transition: 0.3s; position: relative; }
+        .driver-card.disabled { opacity: 0.3; filter: grayscale(100%); pointer-events: none; }
+        .driver-photo-wrap { width: 100%; height: 220px; background-color: var(--theme-color); border-bottom: 1px solid #222; }
+        .driver-photo { width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+        .driver-name { padding: 12px; font-size: 18px; font-weight: 900; margin: 0; text-align: center; }
+        
+        .driver-card.active { border-color: #ff0000; box-shadow: 0 0 20px rgba(255, 0, 0, 0.3); }
+        .driver-card.active .driver-name { background: #1a0000; color: #ff4444; }
+        .live-led { position: absolute; top: 12px; right: 12px; width: 12px; height: 12px; background: #ff0000; border-radius: 50%; display: none; z-index: 10; animation: flash 0.8s infinite alternate; }
+        .driver-card.active .live-led { display: block; }
+
+        .driver-check-btn { display: none; background: #111; color: #aaa; border: 1px solid #444; padding: 10px; border-radius: 4px; font-family: 'Share Tech Mono', monospace; cursor: pointer; width: 100%; font-weight: bold; }
+        .driver-check-btn.active-check { background: #1a0000; color: #ff4444; border-color: #ff0000; }
+
+        /* DEBUG MODE: Visible Audio Engine */
+        #vdo-engine { width: 300px; height: 200px; position: fixed; top: 10px; right: 10px; border: 2px solid #ff0000; background: #000; z-index: 9999; }
     </style>
 </head>
 <body>
 
-    <div id="unlock-overlay" onclick="unlockAudio()">CLICK ANYWHERE TO UNLOCK TEAM RADIO</div>
+    <iframe id="vdo-engine" allow="camera;microphone;autoplay"></iframe>
 
-    <div id="box">[ SYS ] INITIALIZING RECEIVER...</div>
-    
-    <iframe id="vdo-rx" allow="autoplay;camera;microphone"></iframe>
+    <div class="brand-header">
+        <img class="brand-logo" src="https://raw.githubusercontent.com/f1ladsleague/sidebetting/9e649c454badbe13d3d17c100f0f535a7555a058/Logo.png" alt="F1 Lads Logo">
+    </div>
+
+    <div class="dashboard" id="main-dash">
+        <div class="dash-header">
+            <img id="active-team-logo" src="" alt="Team Logo">
+            <div class="telemetry-status" id="telemetry">[ SYS. STANDBY ]</div>
+        </div>
+        
+        <div class="team-grid" id="team-grid">
+            <div class="team-btn" onclick="selectTeam('Mercedes', '#00D7B6', 'MercF1l@ds', [{d: 'Rodda', f: 'Rodda'}, {d: 'Kalpa', f: 'Kalpa'}], 'Mercedes', 'MER.png')">
+                <img src="https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/MER.png" class="team-logo">
+            </div>
+            <div class="team-btn" onclick="selectTeam('Red Bull', '#4781D7', 'RB123', [{d: 'Nippa E', f: 'NippaE'}, {d: 'Eranga', f: 'Eranga'}], 'RedBull', 'RB.png')">
+                <img src="https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/RB.png" class="team-logo">
+            </div>
+            <div class="team-btn" onclick="selectTeam('Ferrari', '#ED1131', 'forzaferrari', [{d: 'Mapa', f: 'Mapa'}, {d: 'Shiyan', f: 'Shiyan'}], 'Ferrari', 'FER.png')">
+                <img src="https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/FER.png" class="team-logo">
+            </div>
+            <div class="team-btn" onclick="selectTeam('McLaren', '#F47600', 'MCC2026', [{d: 'Sahan', f: 'Sahan'}, {d: 'Sameera', f: 'Sameera'}], 'Mclaren', 'MCL.png')">
+                <img src="https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/MCL.png" class="team-logo">
+            </div>
+            <div class="team-btn" onclick="selectTeam('Aston Martin', '#229971', 'Mapasunkredbull', [{d: 'Shahan', f: 'Shahan'}, {d: 'Nuwie G', f: 'NuwieG'}], 'AstonMartin', 'AM.png')">
+                <img src="https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/AM.png" class="team-logo">
+            </div>
+        </div>
+
+        <div id="auth-section">
+            <h3 style="margin-top:0; color: #888; font-weight: 600; text-transform: uppercase; font-family: 'Chakra Petch', sans-serif;">Awaiting Auth</h3>
+            <div class="auth-controls">
+                <input type="password" id="team-pass" placeholder="PASSWORD">
+                <button class="login-btn" onclick="authenticate()">Unlock</button>
+            </div>
+        </div>
+
+        <div id="driver-section">
+            <div id="live-banner">
+                <div class="banner-left">
+                    <div class="blinking-dot" id="comms-led"></div>
+                    <div>
+                        <span class="data-label">COMMS STATUS</span>
+                        <span class="data-value" id="comms-status-text">TX LIVE</span>
+                    </div>
+                </div>
+                <div class="banner-right">
+                    <span class="data-label">T-MINUS (WINDOW)</span>
+                    <span id="live-countdown">00.000</span><span class="ms-unit" id="ms-label">s</span>
+                </div>
+            </div>
+            
+            <div class="driver-grid" id="driver-container"></div>
+        </div>
+    </div>
 
     <script>
-        function unlockAudio() {
-            const silentAudio = new Audio();
-            silentAudio.play().catch(e => {}); 
-            document.getElementById('unlock-overlay').style.display = 'none';
-            
-            // Connect to the VDO Ninja Room. The &scene parameter grabs all audio.
-            document.getElementById('vdo-rx').src = "https://vdo.ninja/?room=F1Lads_Global_Radio_2026&scene&autostart&cleanoutput";
-            document.getElementById('box').innerText = `[ SYS ] SECURE CONNECTION ESTABLISHED`; 
-        }
-
         const firebaseConfig = {
             apiKey: "AIzaSyCCiZwdBkZBZubr8oVsG8hkNE-x2iq3HJ0",
             authDomain: "f1-lads-team-radio-589fc.firebaseapp.com",
@@ -48,33 +145,268 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        const GITHUB_BASE_URL = "https://raw.githubusercontent.com/f1ladsleague/team-radio/main/F1-Radio-System/";
-        const stingFiles = {
-            "Mercedes": "MercedesTeamRadio.mp3",
-            "Red Bull": "RedBullTeamRadio.mp3",
-            "Ferrari": "FerrariTeamRadio.mp3",
-            "McLaren": "MclarenTeamRadio.mp3",
-            "Aston Martin": "AstonMartinTeamRadio.mp3"
+        let currentTeam = null, currentHex = null, currentPass = null, currentDrivers = [], currentFileSuffix = null, currentLogo = null;
+        let activeDriverFile = null, safetyTimer = null, raceState = "PRE-RACE", currentLap = 0, lastTransmittedLap = -1;
+        let precisionTimerInterval = null, postRaceMessageUsed = false, lineIsBusy = false;
+
+        // FIXED: Using the raw github user content URL for the audio file
+        const connectingSoundUrl = 'https://raw.githubusercontent.com/f1ladsleague/team-radio/de150eabe38072f05f2facf5a269dbfeaa56dcbe/F1-Radio-System/radio_beep.mp3';
+        const teamRadioSounds = {
+            'Mercedes': 'https://raw.githubusercontent.com/f1ladsleague/team-radio/main/F1-Radio-System/MercedesTeamRadio.mp3',
+            'Red Bull': 'https://raw.githubusercontent.com/f1ladsleague/team-radio/main/F1-Radio-System/RedBullTeamRadio.mp3',
+            'Ferrari': 'https://raw.githubusercontent.com/f1ladsleague/team-radio/main/F1-Radio-System/FerrariTeamRadio.mp3',
+            'McLaren': 'https://raw.githubusercontent.com/f1ladsleague/team-radio/main/F1-Radio-System/MclarenTeamRadio.mp3',
+            'Aston Martin': 'https://raw.githubusercontent.com/f1ladsleague/team-radio/main/F1-Radio-System/AstonMartinTeamRadio.mp3'
         };
 
-        const box = document.getElementById('box');
+        document.getElementById('team-pass').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                authenticate();
+            }
+        });
 
-        // Listen for Firebase triggers from the Drivers
-        db.ref('radioState').on('value', (snapshot) => {
-            const data = snapshot.val();
+        // Toggle VDO Ninja Mic using the official Iframe API
+        function setMicState(unmute) {
+            const vdoFrame = document.getElementById('vdo-engine');
+            if(vdoFrame && vdoFrame.contentWindow) {
+                vdoFrame.contentWindow.postMessage({"mic": unmute}, "*");
+                console.log("VDO Command Sent: Mic", unmute);
+            }
+        }
+
+        function selectTeam(name, hex, pass, drivers, suffix, logoFile) {
+            if(activeDriverFile) return; 
+            currentTeam = name; currentHex = hex; currentPass = pass; 
+            currentDrivers = drivers; currentFileSuffix = suffix; currentLogo = logoFile;
+            document.querySelectorAll('.team-btn').forEach(btn => btn.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+            document.documentElement.style.setProperty('--theme-color', hex);
+            document.getElementById('auth-section').style.display = 'block';
+        }
+
+        async function authenticate() {
+            if (document.getElementById('team-pass').value === currentPass) {
+                try { await navigator.mediaDevices.getUserMedia({ audio: true }); } 
+                catch(e) { alert("Microphone access is required!"); return; }
+
+                // Removed video stream requirement (&webcam=0) to force audio only
+                const safeTeamName = currentTeam.replace(/\s+/g, '');
+                const vdoUrl = `https://vdo.ninja/?room=F1Lads_Global_Radio_2026&push=${safeTeamName}&autostart&webcam=0&mic=0`;
+                document.getElementById('vdo-engine').src = vdoUrl;
+
+                document.getElementById('auth-section').style.display = 'none';
+                document.getElementById('team-grid').style.display = 'none';
+                document.getElementById('main-dash').classList.add('logged-in');
+                
+                const logoEl = document.getElementById('active-team-logo');
+                logoEl.src = `https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/${currentLogo}`;
+                logoEl.style.display = 'block';
+                
+                buildDriverGrid();
+                document.getElementById('driver-section').style.display = 'block';
+                evaluateTelemetryState();
+            } else { alert("ACCESS DENIED"); }
+        }
+
+        function buildDriverGrid() {
+            const container = document.getElementById('driver-container');
+            container.innerHTML = '';
+            currentDrivers.forEach(driver => {
+                container.innerHTML += `
+                    <div class="driver-wrap">
+                        <div class="driver-card" id="card-${driver.f}" onclick="toggleRadio('${driver.f}', '${driver.d}')">
+                            <div class="live-led"></div>
+                            <div class="driver-photo-wrap">
+                                <img src="https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/${driver.f}.png" class="driver-photo">
+                            </div>
+                            <h3 class="driver-name">${driver.d}</h3>
+                        </div>
+                        <button class="driver-check-btn" id="check-${driver.f}" onclick="performDriverCheck('${driver.f}', '${driver.d}')">RADIO CHECK: ${driver.d.toUpperCase()}</button>
+                    </div>`;
+            });
+        }
+
+        function startPrecisionCountdown(totalDurationMs, buttonEl) {
+            if (connectingSoundUrl) {
+                const beepSound = new Audio(connectingSoundUrl);
+                beepSound.play().catch(e => console.error("Beep blocked:", e));
+            }
+
+            if (teamRadioSounds[currentTeam]) {
+                setTimeout(() => {
+                    const teamVoice = new Audio(teamRadioSounds[currentTeam]);
+                    teamVoice.play().catch(e => console.error("Voice blocked:", e));
+                }, 500); 
+            }
+
+            const liveBanner = document.getElementById('live-banner');
+            const countdownEl = document.getElementById('live-countdown');
+            const statusTextEl = document.getElementById('comms-status-text');
+            const ledEl = document.getElementById('comms-led');
             
-            if (data && data.active) {
-                const actualTeam = data.team ? data.team : "UNKNOWN"; 
-                box.innerText = `[ RX ] RECEIVING: ${actualTeam}`;
-                box.classList.add('busy');
+            const now = Date.now();
+            const introDurationMs = 1500; 
+            const introEndTime = now + introDurationMs;
+            const totalEndTime = now + totalDurationMs;
+            let micIsHot = false;
+            
+            liveBanner.style.display = 'flex'; 
 
-                if (stingFiles[actualTeam]) {
-                    const stingAudio = new Audio(GITHUB_BASE_URL + stingFiles[actualTeam]);
-                    stingAudio.play().catch(e => console.error("Sting block:", e));
+            clearInterval(precisionTimerInterval);
+            precisionTimerInterval = setInterval(() => {
+                const currentTime = Date.now();
+                
+                if (currentTime < introEndTime) {
+                    const remainingIntro = Math.max(0, introEndTime - currentTime);
+                    statusTextEl.innerText = "CONNECTING...";
+                    statusTextEl.style.color = "#F47600";
+                    ledEl.classList.add('orange-dot');
+                    countdownEl.innerText = (remainingIntro / 1000).toFixed(3).padStart(6, '0');
+                    countdownEl.style.color = "#F47600";
+                } else {
+                    if (!micIsHot) {
+                        setMicState(true); 
+                        micIsHot = true;
+                    }
+                    
+                    const remainingLive = Math.max(0, totalEndTime - currentTime);
+                    statusTextEl.innerText = "TX LIVE";
+                    statusTextEl.style.color = "#ff4444";
+                    ledEl.classList.remove('orange-dot');
+                    countdownEl.innerText = (remainingLive / 1000).toFixed(3).padStart(6, '0');
+                    countdownEl.style.color = "#fff";
+
+                    if (remainingLive <= 0) {
+                        clearInterval(precisionTimerInterval);
+                    }
+                }
+            }, 30); 
+        }
+
+        function performDriverCheck(fileId, displayName) {
+            if (lineIsBusy) return;
+            const btn = document.getElementById(`check-${fileId}`);
+            const originalText = `RADIO CHECK: ${displayName.toUpperCase()}`;
+            
+            btn.classList.add('active-check');
+            document.querySelectorAll('.driver-check-btn').forEach(b => b.style.pointerEvents = "none");
+
+            startPrecisionCountdown(5000, btn);
+            db.ref('radioState').set({ active: true, team: currentTeam, driver: displayName + " (TEST)" });
+
+            setTimeout(() => {
+                clearInterval(precisionTimerInterval);
+                setMicState(false); 
+                db.ref('radioState').update({ active: false });
+                
+                document.getElementById('live-banner').style.display = 'none';
+                btn.innerText = originalText;
+                btn.classList.remove('active-check');
+                document.querySelectorAll('.driver-check-btn').forEach(b => b.style.pointerEvents = "auto");
+            }, 5000);
+        }
+
+        function toggleRadio(fileId, displayName) {
+            if (activeDriverFile && activeDriverFile !== fileId) return; 
+            const card = document.getElementById(`card-${fileId}`);
+            
+            if (!activeDriverFile) {
+                if (lineIsBusy) return; 
+                if (raceState === "PRE-RACE") return;
+                if (raceState === "RACING" && (currentLap < 3 || currentLap === lastTransmittedLap)) return;
+                if (raceState === "POST-RACE" && postRaceMessageUsed) return;
+
+                activeDriverFile = fileId;
+                card.classList.add('active');
+                
+                if (raceState === "POST-RACE") postRaceMessageUsed = true;
+                else lastTransmittedLap = currentLap; 
+                
+                startPrecisionCountdown(6500, null);
+                db.ref('radioState').set({ active: true, team: currentTeam, driver: displayName });
+
+                safetyTimer = setTimeout(() => { 
+                    if(activeDriverFile) toggleRadio(activeDriverFile, displayName); 
+                }, 6500);
+            } else {
+                clearTimeout(safetyTimer);
+                clearInterval(precisionTimerInterval);
+                document.getElementById('live-banner').style.display = 'none';
+                
+                activeDriverFile = null;
+                card.classList.remove('active');
+                
+                setMicState(false); 
+                db.ref('radioState').update({ active: false });
+                evaluateTelemetryState();
+            }
+        }
+
+        function updateTelemetry(text, color = "#888") {
+            const tel = document.getElementById('telemetry');
+            tel.innerText = text; tel.style.color = color; tel.style.borderColor = color === "#888" ? "#333" : color;
+        }
+
+        function evaluateTelemetryState() {
+            const checkBtns = document.querySelectorAll('.driver-check-btn');
+            const cards = document.querySelectorAll('.driver-card');
+            
+            if (raceState === "PRE-RACE") {
+                updateTelemetry("[ PRE-RACE : RADIO CHECKS OPEN ]", "#00D7B6");
+                checkBtns.forEach(btn => btn.style.display = "block");
+                cards.forEach(c => c.classList.add('disabled')); 
+            } else if (raceState === "QUALIFYING") {
+                updateTelemetry("[ QUAL : LOCKED UNTIL RACE ]", "#F47600"); 
+                checkBtns.forEach(btn => btn.style.display = "none");
+                cards.forEach(c => c.classList.add('disabled'));
+            } else if (raceState === "POST-RACE") {
+                checkBtns.forEach(btn => btn.style.display = "none");
+                if (postRaceMessageUsed) {
+                    updateTelemetry("[ POST-RACE : COMMS CLOSED ]", "#ff4444");
+                    cards.forEach(c => c.classList.add('disabled'));
+                } else {
+                    updateTelemetry("[ POST-RACE ]", "#F47600");
+                    cards.forEach(c => c.classList.remove('disabled'));
                 }
             } else {
-                box.innerText = `[ SYS ] SECURE CONNECTION ESTABLISHED`;
-                box.classList.remove('busy');
+                checkBtns.forEach(btn => btn.style.display = "none");
+                if (currentLap < 3) {
+                    updateTelemetry(`[ LOCKED UNTIL L3 (CURR: L${currentLap}) ]`, "#ff4444");
+                    cards.forEach(c => c.classList.add('disabled'));
+                } else if (currentLap === lastTransmittedLap) {
+                    updateTelemetry(`[ L${currentLap} : TRANSMISSION COMPLETED ]`, "#F47600");
+                    cards.forEach(c => c.classList.add('disabled'));
+                } else {
+                    updateTelemetry(`[ L${currentLap} : COMMS READY ]`, "#00D7B6");
+                    cards.forEach(c => c.classList.remove('disabled'));
+                }
+            }
+        }
+
+        db.ref('radioState').on('value', (snapshot) => {
+            const radio = snapshot.val();
+            if (radio && radio.active && radio.team !== currentTeam) {
+                lineIsBusy = true;
+                updateTelemetry(`[ LINE BUSY : ${radio.team.toUpperCase()} ]`, "#ff4444");
+                document.querySelectorAll('.driver-card').forEach(c => c.classList.add('disabled'));
+            } else if (radio && !radio.active) {
+                lineIsBusy = false;
+                evaluateTelemetryState();
+            }
+        });
+
+        db.ref('telemetryState').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                if (data.lap !== currentLap || data.state !== raceState) {
+                    if (data.lap < currentLap || data.state === "PRE-RACE") {
+                        lastTransmittedLap = -1; postRaceMessageUsed = false;
+                    }
+                    currentLap = data.lap || 0;
+                    raceState = data.state || "PRE-RACE";
+                    if (!activeDriverFile) evaluateTelemetryState();
+                }
             }
         });
     </script>
