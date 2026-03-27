@@ -16,8 +16,8 @@
             font-size: 24px; font-weight: bold; cursor: pointer; z-index: 9999; text-align: center;
         }
         
-        /* DEBUG MODE: Visible Receiver Box */
-        #vdo-rx { width: 300px; height: 200px; position: fixed; bottom: 10px; right: 10px; border: 2px solid #00D7B6; background: #000; z-index: 9999; }
+        /* Hidden Audio Engine */
+        #vdo-rx { width: 10px; height: 10px; opacity: 0.01; border: none; position: absolute; top: 0; left: 0; pointer-events: none; }
     </style>
 </head>
 <body>
@@ -26,7 +26,7 @@
 
     <div id="box">[ SYS ] INITIALIZING RECEIVER...</div>
     
-    <iframe id="vdo-rx" allow="autoplay;camera;microphone"></iframe>
+    <iframe id="vdo-rx" allow="microphone;autoplay"></iframe>
 
     <script>
         function unlockAudio() {
@@ -34,8 +34,8 @@
             silentAudio.play().catch(e => {}); 
             document.getElementById('unlock-overlay').style.display = 'none';
             
-            // Connect to the VDO Ninja Room. The &scene parameter grabs all audio.
-            document.getElementById('vdo-rx').src = "https://vdo.ninja/?room=F1Lads_Global_Radio_2026&scene&autostart&cleanoutput";
+            // Added &novideo to ensure it only handles audio
+            document.getElementById('vdo-rx').src = "https://vdo.ninja/?room=F1Lads_Global_Radio_2026&scene&autostart&novideo&cleanoutput";
             document.getElementById('box').innerText = `[ SYS ] SECURE CONNECTION ESTABLISHED`; 
         }
 
