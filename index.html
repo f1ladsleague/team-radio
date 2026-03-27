@@ -165,11 +165,10 @@
             }
         });
 
-        // Toggle VDO Ninja Mic using the official Iframe API
+        // The Fixed API Command without the API Lock ID
         function setMicState(unmute) {
             const vdoFrame = document.getElementById('vdo-engine');
             if(vdoFrame && vdoFrame.contentWindow) {
-                // Sending the boolean command directly controls the mic
                 vdoFrame.contentWindow.postMessage({"mic": unmute}, "*");
                 console.log("VDO Command Sent: Mic", unmute);
             }
@@ -190,9 +189,9 @@
                 try { await navigator.mediaDevices.getUserMedia({ audio: true }); } 
                 catch(e) { alert("Microphone access is required!"); return; }
 
-                // ADDED &api AND &novideo: This enables JS control of the mic and prevents the camera prompt!
+                // The Fixed URL: &api=f1lads is gone. &mic=0 is kept.
                 const safeTeamName = currentTeam.replace(/\s+/g, '');
-                const vdoUrl = `https://vdo.ninja/?room=F1Lads_Global_Radio_2026&push=${safeTeamName}&autostart&novideo&mic=0&api=f1lads&cleanoutput`;
+                const vdoUrl = `https://vdo.ninja/?room=F1Lads_Global_Radio_2026&push=${safeTeamName}&autostart&novideo&mic=0&cleanoutput`;
                 document.getElementById('vdo-engine').src = vdoUrl;
 
                 document.getElementById('auth-section').style.display = 'none';
@@ -266,7 +265,7 @@
                     countdownEl.style.color = "#F47600";
                 } else {
                     if (!micIsHot) {
-                        setMicState(true); 
+                        setMicState(true); // Turns the mic ON exactly when the timer drops
                         micIsHot = true;
                     }
                     
@@ -297,7 +296,7 @@
 
             setTimeout(() => {
                 clearInterval(precisionTimerInterval);
-                setMicState(false); 
+                setMicState(false); // Kills the mic exactly at 0.000s
                 db.ref('radioState').update({ active: false });
                 
                 document.getElementById('live-banner').style.display = 'none';
@@ -337,7 +336,7 @@
                 activeDriverFile = null;
                 card.classList.remove('active');
                 
-                setMicState(false); 
+                setMicState(false); // Kills the mic if they click the button early to stop talking
                 db.ref('radioState').update({ active: false });
                 evaluateTelemetryState();
             }
