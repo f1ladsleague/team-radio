@@ -24,7 +24,21 @@
 
         .dash-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--f1-border); padding-bottom: 15px; margin-bottom: 25px; gap: 15px; }
         #active-team-logo { display: none; height: 45px; object-fit: contain; }
-        .telemetry-status { font-family: 'Share Tech Mono', monospace; color: #888; font-size: 16px; background: #050508; padding: 8px 15px; border-radius: 4px; border: 1px solid #333; }
+        
+        /* 🟢 FIX 1: Mobile formatting and clickable panic button */
+        .telemetry-status { 
+            font-family: 'Share Tech Mono', monospace; 
+            color: #888; 
+            font-size: clamp(11px, 3.5vw, 16px); 
+            background: #050508; 
+            padding: 8px 15px; 
+            border-radius: 4px; 
+            border: 1px solid #333; 
+            white-space: nowrap; 
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .telemetry-status:hover { background: #1a0000; border-color: #ff0000; color: #ff4444; }
 
         .team-grid { display: flex; flex-wrap: nowrap; gap: 15px; justify-content: space-between; margin-bottom: 25px; }
         .team-btn { flex: 1; background: #050508; border: 1px solid #333; border-radius: 6px; padding: 15px 10px; cursor: pointer; display: flex; justify-content: center; filter: grayscale(100%) opacity(0.4); }
@@ -84,7 +98,7 @@
     <div class="dashboard" id="main-dash">
         <div class="dash-header">
             <img id="active-team-logo" src="" alt="Team Logo">
-            <div class="telemetry-status" id="telemetry">[ SYS. STANDBY ]</div>
+            <div class="telemetry-status" id="telemetry" onclick="forceUnlock()" title="Click to force-unlock system">[ SYS. STANDBY ]</div>
         </div>
         
         <div class="team-grid" id="team-grid">
@@ -146,7 +160,6 @@
         let activeDriverFile = null, safetyTimer = null, raceState = "PRE-RACE", currentLap = 0, lastTransmittedLap = -1;
         let precisionTimerInterval = null, postRaceMessageUsed = false, lineIsBusy = false;
         
-        // Audio Engine Variables
         let globalAudioStream = null;
         let mediaRecorder = null;
         let audioChunks = [];
@@ -159,6 +172,23 @@
             'McLaren': 'https://raw.githubusercontent.com/f1ladsleague/team-radio/main/F1-Radio-System/MclarenTeamRadio.mp3',
             'Aston Martin': 'https://raw.githubusercontent.com/f1ladsleague/team-radio/main/F1-Radio-System/AstonMartinTeamRadio.mp3'
         };
+
+        // 🟢 FIX 4: The Panic Button function
+        function forceUnlock() {
+            if(confirm("FORCE OVERRIDE: Unlock the channel? Use this only if the system gets stuck.")) {
+                db.ref('radioState').update({ active: false, audioPayload: null });
+                activeDriverFile = null;
+                document.getElementById('live-banner').style.display = 'none';
+                clearTimeout(safetyTimer);
+                clearInterval(precisionTimerInterval);
+                document.querySelectorAll('.driver-check-btn').forEach(b => {
+                    b.classList.remove('active-check');
+                    b.style.pointerEvents = "auto";
+                });
+                document.querySelectorAll('.driver-card').forEach(c => c.classList.remove('active'));
+                evaluateTelemetryState();
+            }
+        }
 
         document.getElementById('team-pass').addEventListener('keypress', function(event) {
             if (event.key === 'Enter') {
@@ -183,10 +213,12 @@
                 try { 
                     globalAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true }); 
                     
-                    // 🟢 THE iOS HACK: Route the stream to the hidden player to prevent Safari from shutting off the mic
                     const iosHack = document.getElementById('ios-mic-hack');
                     iosHack.srcObject = globalAudioStream;
                     iosHack.play().catch(e => console.log("iOS Autoplay restriction handled."));
+
+                    // 🟢 FIX 3: Dead man's switch. If 5G drops entirely, auto-unlock the line.
+                    db.ref('radioState').onDisconnect().update({ active: false, audioPayload: null });
 
                 } catch(e) { 
                     alert("Microphone access is strictly required to broadcast!"); return; 
@@ -267,8 +299,13 @@
                         recordingStarted = true;
                         audioChunks = [];
                         
-                        // Clean initialization. No manual format guessing to break the script.
-                        mediaRecorder = new MediaRecorder(globalAudioStream);
+                        // 🟢 FIX 2: Compress the audio heavily so it uploads on 5G instantly
+                        try {
+                            mediaRecorder = new MediaRecorder(globalAudioStream, { audioBitsPerSecond: 16000 });
+                        } catch (e) {
+                            // Fallback if Safari rejects the custom bitrate
+                            mediaRecorder = new MediaRecorder(globalAudioStream); 
+                        }
 
                         mediaRecorder.ondataavailable = event => {
                             if (event.data && event.data.size > 0) {
@@ -277,7 +314,6 @@
                         };
                         
                         mediaRecorder.onstop = () => {
-                            // Let the browser define its own MIME type to prevent OBS/Safari crashes
                             const actualMime = mediaRecorder.mimeType || 'audio/webm';
                             const audioBlob = new Blob(audioChunks, { type: actualMime });
                             
@@ -286,12 +322,11 @@
                             reader.onloadend = () => {
                                 const base64String = reader.result;
                                 db.ref('radioState').update({ audioPayload: base64String });
-                                console.log(`[SYS] Payload beamed securely as ${actualMime}`);
+                                console.log(`[SYS] Compressed payload beamed securely`);
                             };
                         };
                         
-                        // Standard start, no timeslice (which is what caused the complete crash)
-                        mediaRecorder.start();
+                        mediaRecorder.start(500);
                     }
                     
                     const remainingLive = Math.max(0, totalEndTime - currentTime);
@@ -330,7 +365,7 @@
 
             startPrecisionCountdown(6500, displayName + " (TEST)");
 
-            setTimeout(() => {
+            safetyTimer = setTimeout(() => {
                 db.ref('radioState').update({ active: false, audioPayload: null });
                 document.getElementById('live-banner').style.display = 'none';
                 btn.innerText = originalText;
@@ -428,6 +463,8 @@
             if (radio && radio.active && radio.team !== currentTeam) {
                 lineIsBusy = true;
                 updateTelemetry(`[ LINE BUSY : ${radio.team.toUpperCase()} ]`, "#ff4444");
+                // Visual cue that it can be clicked
+                document.getElementById('telemetry').title = "Click to Override/Clear Channel"; 
                 document.querySelectorAll('.driver-card').forEach(c => c.classList.add('disabled'));
             } else if (radio && !radio.active) {
                 lineIsBusy = false;
