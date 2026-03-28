@@ -255,40 +255,33 @@
                     countdownEl.style.color = "#F47600";
                 } else {
                     
-                    // 🟢 1. DYNAMIC MIME TYPE DETECTION FOR iOS
                     if (!recordingStarted) {
                         recordingStarted = true;
                         audioChunks = [];
                         
-                        let safeMime = '';
-                        if (MediaRecorder.isTypeSupported('audio/webm')) safeMime = 'audio/webm'; // Chrome/Android
-                        else if (MediaRecorder.isTypeSupported('audio/mp4')) safeMime = 'audio/mp4'; // iOS Safari
-                        
-                        const options = safeMime ? { mimeType: safeMime } : {};
-                        mediaRecorder = new MediaRecorder(globalAudioStream, options);
+                        mediaRecorder = new MediaRecorder(globalAudioStream);
 
                         mediaRecorder.ondataavailable = event => {
-                            if (event.data && event.data.size > 0) audioChunks.push(event.data);
+                            if (event.data && event.data.size > 0) {
+                                audioChunks.push(event.data);
+                            }
                         };
                         
                         mediaRecorder.onstop = () => {
-                            // Use the hardware's native format so we don't corrupt the file header
-                            const finalMime = mediaRecorder.mimeType || safeMime || 'audio/webm';
-                            const audioBlob = new Blob(audioChunks, { type: finalMime });
+                            const actualMime = mediaRecorder.mimeType || 'audio/webm';
+                            const audioBlob = new Blob(audioChunks, { type: actualMime });
+                            
                             const reader = new FileReader();
                             reader.readAsDataURL(audioBlob); 
                             reader.onloadend = () => {
                                 const base64String = reader.result;
                                 db.ref('radioState').update({ audioPayload: base64String });
-                                console.log(`[SYS] Payload beamed securely as ${finalMime}`);
-                                
-                                // 🟢 2. DESTROY RECORDER TO PREVENT iOS CRASHES ON SUBSEQUENT PRESSES
-                                mediaRecorder = null;
-                                audioChunks = [];
+                                console.log(`[SYS] Payload beamed securely as ${actualMime}`);
                             };
                         };
                         
-                        mediaRecorder.start();
+                        // 🟢 START RECORDING (with 500ms timeslices to prevent iOS memory dump)
+                        mediaRecorder.start(500);
                     }
                     
                     const remainingLive = Math.max(0, totalEndTime - currentTime);
@@ -301,9 +294,7 @@
                     if (remainingLive <= 0) {
                         clearInterval(precisionTimerInterval);
                         
-                        // 🟢 3. FORCE iOS TO FLUSH ITS BUFFER BEFORE STOPPING
                         if(mediaRecorder && mediaRecorder.state !== "inactive") {
-                            try { mediaRecorder.requestData(); } catch(e) {} // Fixes the 2-second cutoff
                             mediaRecorder.stop();
                         }
                     }
