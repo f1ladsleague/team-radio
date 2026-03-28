@@ -285,7 +285,8 @@
                     return rosterDB[key];
                 }
             }
-            return { first: "Unknown", last: gameId.substring(0,8), team: "FIA", color: "#ffffff", photo: "Mapa", logo: "Logo.png" };
+            // 🔥 FIXED: Now points to "UnknownDriver" instead of "Mapa"
+            return { first: "Unknown", last: gameId.substring(0,8), team: "FIA", color: "#ffffff", photo: "UnknownDriver", logo: "Logo.png" };
         }
 
         // ==========================================
