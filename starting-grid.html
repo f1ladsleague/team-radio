@@ -425,9 +425,9 @@
         }
 
         function populateBattleFocus(data) {
-            // Driver Identities
-            const p1 = getDriverProfile(data.driver1.gameId);
-            const p2 = getDriverProfile(data.driver2.gameId);
+            // Driver Identities (fallback to 'name' if backend uses raw UDP participant names)
+            const p1 = getDriverProfile(data.driver1.gameId || data.driver1.name);
+            const p2 = getDriverProfile(data.driver2.gameId || data.driver2.name);
 
             document.getElementById('bf-left-header').style.setProperty('--team-color', p1.color);
             document.getElementById('bf-left-name').innerText = p1.last;
@@ -441,23 +441,42 @@
             document.getElementById('bf-right-photo').style.display = 'block';
             document.getElementById('bf-right-logo').src = `https://raw.githubusercontent.com/f1ladsleague/landing-page/main/Team_Photos/${p2.logo}`;
 
-            // Telemetry
+            // 1. SPEED
             document.getElementById('left-speed').innerText = data.driver1.speed;
             document.getElementById('right-speed').innerText = data.driver2.speed;
             
-            updateERS('left', data.driver1.ers, data.driver1.deploying);
-            updateERS('right', data.driver2.ers, data.driver2.deploying);
+            // 2. ERS PERCENTAGE CONVERSION (4,000,000 Joules is 100%)
+            // Checks for 'ersStoreEnergy' first, falls back to 'ers' if backend already mapped it
+            const p1ErsRaw = data.driver1.ersStoreEnergy !== undefined ? data.driver1.ersStoreEnergy : data.driver1.ers;
+            const p2ErsRaw = data.driver2.ersStoreEnergy !== undefined ? data.driver2.ersStoreEnergy : data.driver2.ers;
+            
+            const p1ErsPct = Math.min(100, Math.max(0, (p1ErsRaw / 4000000) * 100));
+            const p2ErsPct = Math.min(100, Math.max(0, (p2ErsRaw / 4000000) * 100));
 
-            updateTabs('left', data.driver1.drs, data.driver1.deploying);
-            updateTabs('right', data.driver2.drs, data.driver2.deploying);
+            // 3. ERS DEPLOY MODE (3 = Overtake)
+            const p1DeployMode = data.driver1.ersDeployMode !== undefined ? data.driver1.ersDeployMode : data.driver1.deploying;
+            const p2DeployMode = data.driver2.ersDeployMode !== undefined ? data.driver2.ersDeployMode : data.driver2.deploying;
+            
+            const p1IsOvertaking = p1DeployMode === 3;
+            const p2IsOvertaking = p2DeployMode === 3;
 
-            // 🔥 UPGRADED GAP MATH
+            // 4. DRS STATUS (1 = On)
+            const p1DrsActive = data.driver1.drs === 1 || data.driver1.drs === true;
+            const p2DrsActive = data.driver2.drs === 1 || data.driver2.drs === true;
+
+            // Update UI
+            updateERS('left', p1ErsPct, p1IsOvertaking);
+            updateERS('right', p2ErsPct, p2IsOvertaking);
+
+            updateTabs('left', p1DrsActive, p1IsOvertaking);
+            updateTabs('right', p2DrsActive, p2IsOvertaking);
+
+            // UPGRADED GAP MATH
             const gapEl = document.getElementById('live-gap');
             const currentGap = parseFloat(data.gap); 
             
             gapEl.innerHTML = `+${currentGap.toFixed(3)}<span class="small-s">s</span>`;
             
-            // Ignore the very first tick to prevent a false "Red" flash
             if (previousGap !== 0 && currentGap !== previousGap) {
                 if (currentGap < previousGap) {
                     gapEl.classList.add('gap-decreasing'); 
@@ -468,7 +487,6 @@
                 }
             }
             
-            // Only save valid numbers for the next tick
             if (!isNaN(currentGap)) {
                 previousGap = currentGap;
             }
