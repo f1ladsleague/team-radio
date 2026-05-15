@@ -517,19 +517,46 @@
             });
         });
 
-        // 2. Battle Focus Listener
-        db.ref('battleFocusLive').on('value', (snapshot) => {
-            const bfData = snapshot.val();
-            const battleScene = document.getElementById('battle-scene');
+        // 2. Battle Focus & Camera Sync Listeners
+        let currentBattleData = null;
+        let currentCameraIdx = -1;
+        const battleScene = document.getElementById('battle-scene');
 
-            if (bfData && bfData.show) {
+        function evaluateVisibility() {
+            // Hide if Python says no battle, or data is missing
+            if (!currentBattleData || !currentBattleData.show) {
+                battleScene.classList.remove('active');
+                previousGap = 0;
+                return;
+            }
+
+            // Check if the AI Director's camera matches Driver 1 or Driver 2
+            const idx1 = currentBattleData.driver1.carIndex;
+            const idx2 = currentBattleData.driver2.carIndex;
+
+            if (currentCameraIdx === idx1 || currentCameraIdx === idx2) {
                 gridScene.classList.remove('active'); 
-                populateBattleFocus(bfData);
+                populateBattleFocus(currentBattleData);
                 battleScene.classList.add('active');
             } else {
                 battleScene.classList.remove('active');
-                previousGap = 0; // Reset the gap memory when graphic hides
+                previousGap = 0;
             }
+        }
+
+        // Listen for AI Director Camera Changes
+        db.ref('broadcastCamera').on('value', (snapshot) => {
+            const camData = snapshot.val();
+            if (camData && camData.spectatorCarIndex !== undefined) {
+                currentCameraIdx = camData.spectatorCarIndex;
+                evaluateVisibility();
+            }
+        });
+
+        // Listen for Python Battle Data
+        db.ref('battleFocusLive').on('value', (snapshot) => {
+            currentBattleData = snapshot.val();
+            evaluateVisibility();
         });
 
     </script>
